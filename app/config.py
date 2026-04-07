@@ -18,7 +18,7 @@ class Settings:
 
     # ── Google Cloud / Vertex AI ────────────────────────────────────────
     GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "")
-    GCP_LOCATION: str = os.getenv("GCP_LOCATION", "us-central1")
+    GCP_LOCATION: str = os.getenv("GCP_LOCATION", "us-west1")
 
     # Si usas Service Account en Render, pon la ruta al JSON:
     GOOGLE_APPLICATION_CREDENTIALS: str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")

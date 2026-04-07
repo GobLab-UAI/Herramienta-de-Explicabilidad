@@ -20,9 +20,12 @@ from typing import Dict, List, Optional
 import vertexai
 from vertexai import rag
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+
+#from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_vertexai import ChatVertexAI
 from langchain_core.prompts import PromptTemplate
-from langchain.memory import ConversationBufferWindowMemory
+from langchain_google_genai import ChatGoogleGenerativeAI # Versión moderna
+#from langchain.memory import ConversationBufferWindowMemory
 from langchain_core.messages import HumanMessage, AIMessage
 
 from app.config import settings
@@ -33,43 +36,44 @@ logger = logging.getLogger(__name__)
 
 PROFILE_PROMPTS = {
     "data-scientist": (
-        "You are an expert AI assistant speaking to a Machine Learning engineer.\n"
-        "Use precise technical terminology, reference model internals (feature weights, "
-        "attributions, metrics), and include quantitative details.\n\n"
-        "Context from knowledge base:\n{context}\n\n"
-        "Explanation data:\n{explanation}\n\n"
-        "Question: {question}\n\n"
-        "Provide a thorough technical explanation."
+        "Eres un asistente experto en IA hablando con un ingeniero de Machine Learning.\n"
+        "Usa terminología técnica precisa, haz referencia a los componentes internos del modelo "
+        "(pesos de características, atribuciones, métricas) e incluye detalles cuantitativos.\n\n"
+        "Contexto de la base de conocimientos:\n{context}\n\n"
+        "Datos de la explicación:\n{explanation}\n\n"
+        "Pregunta: {question}\n\n"
+        "Proporciona una explicación técnica exhaustiva en ESPAÑOL."
     ),
     "domain-expert": (
-        "You are a helpful AI assistant speaking to a domain expert (e.g., a doctor "
-        "or engineer). Translate ML concepts into domain-specific terminology. "
-        "Avoid raw model jargon but keep professional depth.\n\n"
-        "Context from knowledge base:\n{context}\n\n"
-        "Explanation data:\n{explanation}\n\n"
-        "Question: {question}\n\n"
-        "Provide a clear domain-oriented explanation."
+        "Eres un asistente de IA hablando con un experto del dominio (ej. un médico o ingeniero).\n"
+        "Traduce los conceptos de Machine Learning a terminología específica del dominio. "
+        "Evita la jerga técnica pura de ML pero mantén la profundidad profesional.\n\n"
+        "Contexto de la base de conocimientos:\n{context}\n\n"
+        "Datos de la explicación:\n{explanation}\n\n"
+        "Pregunta: {question}\n\n"
+        "Proporciona una explicación clara orientada al dominio en ESPAÑOL."
     ),
     "non-expert": (
-        "You are a friendly AI assistant explaining results to someone without "
-        "technical background. Use simple analogies, everyday language, and avoid "
-        "jargon. Be concise and reassuring.\n\n"
-        "Context from knowledge base:\n{context}\n\n"
-        "Explanation data:\n{explanation}\n\n"
-        "Question: {question}\n\n"
-        "Explain this in simple, easy-to-understand terms."
+        "Eres un asistente de IA amigable que explica resultados a alguien sin formación técnica.\n"
+        "Usa analogías sencillas, lenguaje cotidiano y evita tecnicismos. "
+        "Sé conciso y tranquilizador.\n\n"
+        "Contexto de la base de conocimientos:\n{context}\n\n"
+        "Datos de la explicación:\n{explanation}\n\n"
+        "Pregunta: {question}\n\n"
+        "Explica esto en términos simples y fáciles de entender en ESPAÑOL."
     ),
 }
 
 CHAT_SYSTEM_PROMPT = (
-    "You are ProfileXAI, an AI assistant that helps users understand ML model "
-    "predictions. You have access to a knowledge base about the domain. "
-    "Answer follow-up questions clearly, adapting your language to the user's "
-    "profile level: {profile}.\n\n"
-    "Context from knowledge base:\n{context}\n\n"
-    "Previous conversation:\n{history}\n\n"
-    "User question: {question}\n\n"
-    "Provide a helpful, grounded response."
+    "Eres ProfileXAI, un asistente experto en explicar modelos de IA.\n\n"
+    "CONTEXTO DE LA EXPLICACIÓN ACTUAL (Lo que el usuario ve en pantalla):\n"
+    "{explanation_context}\n\n"
+    "CONTEXTO DE LA BASE DE CONOCIMIENTOS (Documentos):\n"
+    "{context}\n\n"
+    "HISTORIAL DE CONVERSACIÓN:\n"
+    "{history}\n\n"
+    "PREGUNTA DEL USUARIO: {question}\n\n"
+    "Responde de forma coherente usando ambos contextos. Perfil de audiencia: {profile}."
 )
 
 
@@ -93,18 +97,19 @@ class RAGEngine:
             location=settings.GCP_LOCATION,
         )
 
-        # ── LangChain LLM (Gemini) ──────────────────────────────────────
-        self.llm = ChatGoogleGenerativeAI(
-            model=settings.GEMINI_MODEL,
-            google_api_key=settings.GEMINI_API_KEY,
+        # ── LangChain LLM (Gemini vía Vertex AI) ─────────────────────────
+        # NOTA: Cambiamos ChatGoogleGenerativeAI por ChatVertexAI
+        self.llm = ChatVertexAI(
+            model_name=settings.GEMINI_MODEL, # Asegúrate que en settings sea "gemini-1.5-flash"
+            project=settings.GCP_PROJECT_ID,
+            location=settings.GCP_LOCATION,
             temperature=0.3,
         )
 
         # ── Estado ───────────────────────────────────────────────────────
         self.corpus = None
         self.corpus_name: Optional[str] = None
-        # Memoria de chat por perfil
-        self._chat_memories: Dict[str, ConversationBufferWindowMemory] = {}
+
 
     # ────────────────────────────────────────────────────────────────────
     # 1. CORPUS — Creación (Vertex AI RAG Engine se encarga de la DB)
@@ -197,21 +202,20 @@ class RAGEngine:
         k = top_k or settings.RAG_SIMILARITY_TOP_K
 
         try:
+            retrieval_config = rag.RagRetrievalConfig(
+                top_k=k,
+                )
+            #vector_distance_threshold=settings.RAG_VECTOR_DISTANCE_THRESHOLD
+
             response = rag.retrieval_query(
                 rag_resources=[
                     rag.RagResource(rag_corpus=self.corpus_name)
                 ],
                 text=query,
-                similarity_top_k=k,
-                vector_distance_threshold=settings.RAG_VECTOR_DISTANCE_THRESHOLD,
+                rag_retrieval_config=retrieval_config,
             )
 
-            chunks = []
-            if response and response.contexts and response.contexts.contexts:
-                for ctx in response.contexts.contexts:
-                    if ctx.text:
-                        chunks.append(ctx.text)
-
+            chunks = [ctx.text for ctx in response.contexts.contexts if ctx.text]
             logger.info("Recuperados %d chunks para query", len(chunks))
             return chunks
 
@@ -266,6 +270,7 @@ class RAGEngine:
         message: str,
         profile: str = "non-expert",
         history: Optional[List[dict]] = None,
+        explanation_context: str = ""
     ) -> dict:
         """
         Chat interactivo: recupera contexto de Vertex AI RAG Engine,
@@ -273,19 +278,17 @@ class RAGEngine:
         """
         # Recuperar contexto relevante del corpus
         context_chunks = self.retrieve(message)
-        context = "\n---\n".join(context_chunks) if context_chunks else "No additional context available."
+        context = "\n---\n".join(context_chunks) if context_chunks else "No additional context."
 
-        # Construir historial para el prompt
         history_text = ""
-        if history:
-            for msg in history[-10:]:  # últimos 10 mensajes
-                role = "User" if msg.get("role") == "user" else "Assistant"
-                history_text += f"{role}: {msg.get('content', '')}\n"
+        for msg in history[-10:]:
+            role = "User" if msg.get("role") == "user" else "Assistant"
+            history_text += f"{role}: {msg.get('content', '')}\n"
 
-        # Prompt con contexto + historial + perfil
+        # IMPORTANTE: input_variables ahora incluye "explanation_context"
         prompt = PromptTemplate(
             template=CHAT_SYSTEM_PROMPT,
-            input_variables=["profile", "context", "history", "question"],
+            input_variables=["profile", "context", "history", "explanation_context", "question"],
         )
 
         chain = prompt | self.llm
@@ -293,17 +296,11 @@ class RAGEngine:
             "profile": profile,
             "context": context,
             "history": history_text,
+            "explanation_context": explanation_context,
             "question": message,
         })
 
-        # Extraer fuentes
-        sources = [chunk[:200] for chunk in context_chunks[:3]]
-
-        return {
-            "response": response.content,
-            "sources": sources,
-        }
-
+        return {"response": response.content, "sources": context_chunks[:3]}
     # ────────────────────────────────────────────────────────────────────
     # Cleanup
     # ────────────────────────────────────────────────────────────────────

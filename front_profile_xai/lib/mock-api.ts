@@ -1,0 +1,138 @@
+// const API_BASE_URL = "https://profile-xai-api.onrender.com/api";
+const API_BASE_URL = "http://127.0.0.1:8000/api"
+
+export interface DatasetSchema { columns: Array<{ name: string; type: "categorical" | "numerical" | "text"; options?: string[] }>; }
+export interface InstanceData { [key: string]: string | number; }
+export type UserProfile = "data-scientist" | "domain-expert" | "non-expert";
+export interface ChatMessage { role: "user" | "assistant"; content: string; timestamp: Date; }
+
+export async function startProcessing() {
+  const res = await fetch(`${API_BASE_URL}/processing/start`, { 
+    method: "POST",
+    headers: { "ngrok-skip-browser-warning": "true" }
+  });
+  const data = await res.json();
+  localStorage.setItem("jobId", data.jobId);
+  return data;
+}
+
+export async function uploadDataset(files: File[]) {
+  const jobId = localStorage.getItem("jobId");
+  const formData = new FormData();
+  files.forEach(f => formData.append("files", f));
+  
+  const res = await fetch(`${API_BASE_URL}/upload/dataset?jobId=${jobId}`, { 
+    method: "POST", 
+    headers: { "ngrok-skip-browser-warning": "true" },
+    body: formData 
+  });
+  return await res.json();
+}
+
+export async function getDatasetSchema(): Promise<DatasetSchema> {
+  try {
+    const jobId = localStorage.getItem("jobId");
+    const res = await fetch(`${API_BASE_URL}/dataset/schema?jobId=${jobId}`, {
+      headers: { "ngrok-skip-browser-warning": "true" }
+    });
+    
+    if (!res.ok) throw new Error(`El servidor respondió con código ${res.status}`);
+    return await res.json();
+  } catch (error) {
+    console.error("Fallo al extraer el esquema del CSV:", error);
+    return { columns: [] }; 
+  }
+}
+
+export async function getRandomInstance(): Promise<InstanceData> {
+  try {
+    const jobId = localStorage.getItem("jobId");
+    const res = await fetch(`${API_BASE_URL}/dataset/random-instance?jobId=${jobId}`, {
+      headers: { "ngrok-skip-browser-warning": "true" }
+    });
+    
+    if (!res.ok) throw new Error(`El servidor respondió con código ${res.status}`);
+    return await res.json();
+  } catch (error) {
+    console.error("Fallo al obtener la instancia aleatoria:", error);
+    return {};
+  }
+}
+
+// Mocks temporales
+export async function uploadKnowledgeBase(files: File[]) {
+  const jobId = localStorage.getItem("jobId");
+  const formData = new FormData();
+  files.forEach(f => formData.append("files", f));
+  
+  const res = await fetch(`${API_BASE_URL}/upload/knowledge-base?jobId=${jobId}`, { 
+    method: "POST", 
+    headers: { "ngrok-skip-browser-warning": "true" },
+    body: formData 
+  });
+  return await res.json();
+}
+
+export async function uploadModel(files: File[]) {
+  const jobId = localStorage.getItem("jobId");
+  const formData = new FormData();
+  files.forEach(f => formData.append("files", f));
+  
+  const res = await fetch(`${API_BASE_URL}/upload/model?jobId=${jobId}`, { 
+    method: "POST", 
+    headers: { "ngrok-skip-browser-warning": "true" },
+    body: formData 
+  });
+  return await res.json();
+}
+
+// 7. Generar Explicación (El llamado a LIME en tu backend)
+export async function generateExplanation(profile: string, instance: any) {
+  const jobId = localStorage.getItem("jobId");
+  
+  const res = await fetch(`${API_BASE_URL}/explain`, {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true" 
+    },
+    // Enviamos el ID, el perfil de la audiencia y el diccionario con los datos del paciente/sistema
+    body: JSON.stringify({ jobId, profile, instance }) 
+  });
+  
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(`Error en IA: ${errorData.detail || 'Fallo desconocido'}`);
+  }
+  
+  return await res.json();
+}
+
+export async function chatRag(message: string, history: any[],explanationText: string, profile: string = "non-expert") {
+  const jobId = localStorage.getItem("jobId");
+  
+  const res = await fetch(`${API_BASE_URL}/chat`, {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true"
+    },
+    body: JSON.stringify({ 
+      jobId: jobId, 
+      message: message, 
+      profile: profile, 
+      history: history,
+      explanation_context: explanationText
+    })
+  });
+  
+  if (!res.ok) {
+    throw new Error("Error al conectar con el Chat RAG");
+  }
+  
+  // Extraemos los datos completos (el diccionario de Python)
+  const data = await res.json();
+  
+  // ¡El truco! Devolvemos ÚNICAMENTE el texto de la respuesta para que React no se asuste
+  return data.response; 
+}

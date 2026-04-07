@@ -427,6 +427,7 @@ async def chat(payload: dict):
     message = payload.get("message", "")
     profile = payload.get("profile", "non-expert")
     history = payload.get("history", [])
+    explanation_context = payload.get("explanation_context", "")
 
     if not message:
         raise HTTPException(status_code=400, detail="Mensaje vacío.")
@@ -437,7 +438,10 @@ async def chat(payload: dict):
     if rag_engine:
         try:
             result = rag_engine.chat(
-                message=message, profile=profile, history=history,
+                message=message, 
+                profile=profile, 
+                history=history,
+                explanation_context=explanation_context
             )
             return result
         except Exception as e:
