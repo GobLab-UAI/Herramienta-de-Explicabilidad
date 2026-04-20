@@ -5,7 +5,8 @@ python-multipart==0.0.9
 
 # ── Data & ML ─────────────────────────────────────────────
 pandas==2.2.2
-numpy==1.26.4
+onnxruntime
+numpy<2.0.0
 scikit-learn==1.6.1
 joblib==1.4.2
 
@@ -17,6 +18,6 @@ anchor-exp==0.0.2.0
 # ── Vertex AI + LangChain (activar cuando se configure GCP) ──
 google-cloud-aiplatform>=1.74.0
 langchain>=0.3.25
-#langchain-google-genai>=2.1.4
+langchain-google-genai>=2.1.4
 langchain-community
 langchain-google-vertexai

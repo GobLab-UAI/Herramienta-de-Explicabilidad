@@ -21,8 +21,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.utils import infer_column_type, save_upload
-from app.modeling import ModelExplainer
 from app.explanation import ExplanationEngine
+from app.modelorchestrator import orchestrate_conversion
+from app.modeling import ModelExplainer, AgnosticModelExplainer
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -106,10 +108,34 @@ async def upload_files(
 
         if upload_type == "dataset" and f.filename.endswith(".csv"):
             job["dataset_csv"] = path
-        elif upload_type == "model" and f.filename.endswith((".pkl", ".h5", ".joblib")):
-            job["model_path"] = path
+
+        elif upload_type == "model" and f.filename.endswith((".pkl", ".joblib")):
+            # 1. Ruta temporal donde se guardó el archivo "sucio"
+            temp_model_path = path 
+            
+            # 2. Generamos el nombre y la ruta del nuevo archivo ONNX
+            nombre_base = os.path.splitext(f.filename)[0]
+            onnx_filename = f"{nombre_base}_agnostico.onnx"
+            onnx_path = os.path.join(folder, onnx_filename)
+            
+            # 3. Disparamos la conversión usando el Sandbox (Docker)
+            logger.info(f"Iniciando conversión agnóstica a ONNX para {f.filename}...")
+            try:
+                orchestrate_conversion(temp_model_path, onnx_path)
+                # 4. Asignamos la ruta del ONNX, no la del pkl/joblib original
+                job["model_path"] = onnx_path
+                logger.info(f"Conversión exitosa. Modelo agnóstico guardado en {onnx_path}")
+            except SystemExit as e:
+                # Si sys.exit() es llamado dentro del orquestador por error crítico
+                logger.error(f"Fallo crítico en el Sandbox: {e}")
+                raise HTTPException(status_code=500, detail="Fallo de incompatibilidad de versiones. Imposible crear sandbox.")
+            except Exception as e:
+                logger.error(f"Error en orquestación de Docker: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+                
         elif upload_type == "knowledge-base":
-            job["kb_files"].append(path)
+            job["kb_files"].append(path)           
+            
 
     # Inicializar RAG si está disponible
     if upload_type == "knowledge-base" and job["kb_files"] and HAS_RAG:
@@ -164,20 +190,29 @@ def _get_or_create_engine(job: dict, features: List[str]) -> ExplanationEngine:
     """Inicializa el ExplanationEngine si no existe."""
     if job["explanation_engine"] is not None:
         return job["explanation_engine"]
-
+    
     df = pd.read_csv(job["dataset_csv"])
+    bg_data = df[features].sample(n=70, random_state=42) if len(df) > 100 else df[features]
 
-    me = ModelExplainer(
-        pipeline_path=job["model_path"],
-        background_data=df[features].sample(n=70, random_state=42) if len(df) > 100 else df[features],
-    ) #Seguridad para prueba rapida, solo 70 instancias
+    # --- RUTEO INTELIGENTE ---
+    model_path = job["model_path"]
+    
+    if model_path.endswith('.onnx'):
+        logger.info("Usando motor agnóstico (Fase 2)")
+        me = AgnosticModelExplainer(model_path=model_path, background_data=bg_data)
+    else:
+        logger.info("Usando motor nativo")
+        me = ModelExplainer(pipeline_path=model_path, background_data=bg_data)
 
-    # Detectar clases y crear label_map
+    # Refinamiento del mapeo de etiquetas
     if hasattr(me.model, "classes_"):
-        # Quitamos el int(c) para que soporte tanto números como textos
+        # Intentamos obtener los nombres reales si están disponibles, 
+        # asegurando que la clave sea el valor original (int o str)
         label_map = {c: str(c) for c in me.model.classes_}
     else:
-        label_map = {0: "Class 0", 1: "Class 1"}
+        # Fallback seguro para modelos de regresión o cajas negras sin metadatos
+        logger.warning("El modelo no expone clases explícitas. Usando mapeo genérico.")
+        label_map = {0: "Negativo/Clase 0", 1: "Positivo/Clase 1"}
 
     engine = ExplanationEngine(
         model_explainer=me,

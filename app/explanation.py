@@ -17,7 +17,7 @@ import shap
 from anchor.anchor_tabular import AnchorTabularExplainer
 from lime.lime_tabular import LimeTabularExplainer
 
-from app.modeling import ModelExplainer
+from app.modeling import ModelExplainer, AgnosticModelExplainer
 
 # ── Compatibilidad sklearn ───────────────────────────────────────────────
 try:
@@ -41,9 +41,10 @@ class ExplanationEngine:
         label_map: Dict[int, str],
         mode: str = "classification",
     ):
-        if not isinstance(model_explainer, ModelExplainer):
-            raise TypeError("model_explainer debe ser instancia de ModelExplainer")
-
+# Ahora aceptamos tanto el motor nativo como el agnóstico
+        if not isinstance(model_explainer, (ModelExplainer, AgnosticModelExplainer)):
+            raise TypeError("model_explainer debe ser ModelExplainer o AgnosticModelExplainer")
+        
         self.me = model_explainer
         self.target = target_name
         self.label_map = label_map

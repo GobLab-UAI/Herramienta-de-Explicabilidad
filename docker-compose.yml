@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/src/app
+      - ~/.config/gcloud:/root/.config/gcloud:ro
+      # 1. El cable que conecta el Docker interno con el de tu Mac:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # 2. El disco duro compartido para los archivos subidos:
+      - xai_shared_data:/shared_uploads
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=project-d2a03bd2-741f-44e7-80a # Cambia por tu ID de GCP
+    depends_on:
+      - frontend # Opcional, dependiendo de tu lógica
+
+  frontend:
+    build: ./front_profile_xai
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./front_profile_xai:/app
+      - /app/node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+
+volumes:
+  xai_shared_data:
+    name: xai_shared_data

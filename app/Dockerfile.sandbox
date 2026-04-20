@@ -1,0 +1,18 @@
+# Dockerfile
+FROM python:3.10-slim
+
+ARG SKLEARN_VERSION
+
+WORKDIR /workspace
+
+# Instalamos las librerías necesarias. 
+# Limitamos numpy a <2.0.0 para compatibilidad con las versiones modernas de sklearn.
+RUN pip install --no-cache-dir \
+    scikit-learn==${SKLEARN_VERSION} \
+    skl2onnx \
+    joblib \
+    "numpy<2.0.0"
+
+COPY conver.py /workspace/conver.py
+
+ENTRYPOINT ["python", "/workspace/conver.py"]

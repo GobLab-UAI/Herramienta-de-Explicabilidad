@@ -13,6 +13,9 @@ import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline
 
+import onnxruntime as rt
+
+import logging
 
 class ModelExplainer:
     """
@@ -110,3 +113,62 @@ class ModelExplainer:
             return np.array(x_raw).flatten()
         arr = np.array(x_raw).reshape(1, -1)
         return self.preprocessor.transform(arr)[0]
+
+
+logger = logging.getLogger(__name__)
+
+class AgnosticModelExplainer:
+    """
+    Explainer especializado en modelos ONNX (Caja Negra).
+    Diseñado para ser 100% agnóstico y compatible con métodos MAIM.
+    """
+    def __init__(self, model_path: str, background_data: pd.DataFrame = None):
+        self.model_path = model_path
+        self.background_data = background_data
+        self.X_background = background_data # Candado abierto para ExplanationEngine
+        
+        try:
+            self.session = rt.InferenceSession(model_path)
+            self.onnx_inputs = self.session.get_inputs() # Extraemos TODOS los tubos de entrada
+            logger.info(f"Sesión ONNX iniciada con éxito. Detectados {len(self.onnx_inputs)} inputs.")
+        except Exception as e:
+            logger.error(f"Error al cargar el motor ONNX: {e}")
+            raise
+
+        self.classes_ = [0, 1]  
+        self.model = self  
+
+    def predict_fn(self, X: Any) -> np.ndarray:
+        if isinstance(X, pd.DataFrame):
+            X_data = X.values.astype(np.float32)
+        elif isinstance(X, list):
+            X_data = np.array(X).astype(np.float32)
+        else:
+            X_data = X.astype(np.float32)
+
+        if len(X_data.shape) == 1:
+            X_data = X_data.reshape(1, -1)
+
+        # --- LÓGICA DE ALIMENTACIÓN INTELIGENTE ---
+        feed_dict = {}
+        if len(self.onnx_inputs) == 1:
+            # Caso Estándar: El modelo espera una sola matriz gigante (Ej: modelos antiguos)
+            feed_dict[self.onnx_inputs[0].name] = X_data
+        else:
+            # Caso Complejo: El modelo es un Pipeline que exige columnas separadas
+            for i, inp in enumerate(self.onnx_inputs):
+                # Extraemos la columna 'i' y mantenemos su forma de columna (N, 1)
+                feed_dict[inp.name] = X_data[:, i:i+1]
+
+        outputs = self.session.run(None, feed_dict)
+        
+        if len(outputs) > 1 and isinstance(outputs[1], (list, np.ndarray, dict)):
+            probas = outputs[1]
+            if isinstance(probas, list): 
+                return np.array([[d[k] for k in sorted(d.keys())] for d in probas])
+            return probas
+        
+        return outputs[0]
+
+    def predict_proba(self, X):
+        return self.predict_fn(X)

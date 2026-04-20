@@ -11,13 +11,13 @@ from typing import List
 class Settings:
     # ── Servidor ─────────────────────────────────────────────────────────
     PORT: int = int(os.getenv("PORT", "8000"))
-    UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "/tmp/uploads")
+    UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "/shared_uploads")
     CORS_ORIGINS: List[str] = field(default_factory=lambda: [
         os.getenv("CORS_ORIGIN", "*")
     ])
 
     # ── Google Cloud / Vertex AI ────────────────────────────────────────
-    GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "")
+    GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "project-d2a03bd2-741f-44e7-80a")
     GCP_LOCATION: str = os.getenv("GCP_LOCATION", "us-west1")
 
     # Si usas Service Account en Render, pon la ruta al JSON:
