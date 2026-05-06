@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+import asyncio
 
 from app.config import settings
 from app.utils import infer_column_type, save_upload
@@ -103,51 +104,29 @@ async def upload_files(
 
     saved: list[dict] = []
     for f in files:
+        # 1. Log para ver QUÉ archivo está entrando exactamente
+        logger.info(f"Recibiendo archivo: {f.filename} para el endpoint: {upload_type}")
+        
         path = await save_upload(f, folder)
+        await asyncio.sleep(10)
         saved.append({"name": f.filename, "path": path})
 
-        if upload_type == "dataset" and f.filename.endswith(".csv"):
+        # 2. Hacemos el check en minúsculas para evitar errores
+        nombre_archivo = f.filename.lower()
+
+        if upload_type == "dataset" and nombre_archivo.endswith(".csv"):
             job["dataset_csv"] = path
+            # 3. Log para confirmar que la memoria se actualizó
+            logger.info(f"¡ÉXITO! Dataset detectado y guardado en memoria: {path}")
 
-        elif upload_type == "model" and f.filename.endswith((".pkl", ".joblib")):
-            # 1. Ruta temporal donde se guardó el archivo "sucio"
-            temp_model_path = path 
-            
-            # 2. Generamos el nombre y la ruta del nuevo archivo ONNX
-            nombre_base = os.path.splitext(f.filename)[0]
-            onnx_filename = f"{nombre_base}_agnostico.onnx"
-            onnx_path = os.path.join(folder, onnx_filename)
-            
-            # 3. Disparamos la conversión usando el Sandbox (Docker)
-            logger.info(f"Iniciando conversión agnóstica a ONNX para {f.filename}...")
-            try:
-                orchestrate_conversion(temp_model_path, onnx_path)
-                # 4. Asignamos la ruta del ONNX, no la del pkl/joblib original
-                job["model_path"] = onnx_path
-                logger.info(f"Conversión exitosa. Modelo agnóstico guardado en {onnx_path}")
-            except SystemExit as e:
-                # Si sys.exit() es llamado dentro del orquestador por error crítico
-                logger.error(f"Fallo crítico en el Sandbox: {e}")
-                raise HTTPException(status_code=500, detail="Fallo de incompatibilidad de versiones. Imposible crear sandbox.")
-            except Exception as e:
-                logger.error(f"Error en orquestación de Docker: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
-                
+        elif upload_type == "model" and nombre_archivo.endswith((".pkl", ".joblib")):
+            job["model_path"] = path
+    
+
+    
         elif upload_type == "knowledge-base":
-            job["kb_files"].append(path)           
-            
+            job["kb_files"].append(path)
 
-    # Inicializar RAG si está disponible
-    if upload_type == "knowledge-base" and job["kb_files"] and HAS_RAG:
-        try:
-            if job["rag_engine"] is None:
-                job["rag_engine"] = RAGEngine()
-            n = job["rag_engine"].ingest(job["kb_files"])
-            logger.info("RAG: %d archivos indexados para job %s", n, jobId)
-        except Exception as e:
-            logger.warning("RAG no pudo inicializarse: %s", e)
-
-    return {"jobId": jobId, "uploaded": saved}
 
 
 # ─── Schema del dataset ─────────────────────────────────────────────────
@@ -167,6 +146,31 @@ async def dataset_schema(jobId: str):
             opciones = sorted(df[col].dropna().unique().tolist())
             item["options"] = [str(o) for o in opciones]
         columns.append(item)
+
+
+    ####### OPCIONAL PARA CARGAR MODELO 
+    
+    ruta_actual_modelo = job["model_path"]
+    
+    # Si el modelo sigue siendo un .pkl, significa que no lo hemos convertido aún
+    if ruta_actual_modelo.endswith((".pkl", ".joblib")):
+        logger.info("Primera solicitud de explicación. Iniciando conversión a ONNX...")
+        
+        # Reemplazamos la extensión para crear la nueva ruta
+        onnx_path = ruta_actual_modelo.replace(".pkl", "_agnostico.onnx").replace(".joblib", "_agnostico.onnx")
+        
+        try:
+            # Aquí disparamos el Sandbox de Docker, ya seguros de que el CSV existe
+            orchestrate_conversion(ruta_actual_modelo, onnx_path, job["dataset_csv"])
+            
+            # Actualizamos el job con la nueva ruta para no volver a convertirlo
+            job["model_path"] = onnx_path  
+            logger.info("Conversión exitosa. Listo para explicar.")
+            
+        except Exception as e:
+            logger.error(f"Fallo en el Sandbox durante la conversión: {e}")
+            raise HTTPException(status_code=500, detail=f"Error convirtiendo el modelo: {str(e)}")
+        
 
     return {"columns": columns}
 

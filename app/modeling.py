@@ -138,28 +138,49 @@ class AgnosticModelExplainer:
         self.classes_ = [0, 1]  
         self.model = self  
 
+        try:
+            # Hacemos una predicción "fantasma" con la primera fila de datos
+            dummy_out = self.predict_fn(self.X_background.iloc[[0]])
+            
+            # Si devuelve probabilidades, contamos cuántas columnas (clases) hay
+            if len(dummy_out.shape) > 1:
+                num_classes = dummy_out.shape[1]
+                self.classes_ = list(range(num_classes))
+            else:
+                self.classes_ = [0, 1] # Fallback estándar
+        except Exception as e:
+            logger.warning(f"No se pudo inferir clases: {e}. Usando fallback.")
+            self.classes_ = [0, 1, 2]
+
     def predict_fn(self, X: Any) -> np.ndarray:
-        if isinstance(X, pd.DataFrame):
-            X_data = X.values.astype(np.float32)
-        elif isinstance(X, list):
-            X_data = np.array(X).astype(np.float32)
-        else:
-            X_data = X.astype(np.float32)
+        # 1. Forzamos a que sea un DataFrame para no perder los tipos de datos originales
+        if not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X)
 
-        if len(X_data.shape) == 1:
-            X_data = X_data.reshape(1, -1)
-
-        # --- LÓGICA DE ALIMENTACIÓN INTELIGENTE ---
         feed_dict = {}
+
+        # 2. LÓGICA DE ALIMENTACIÓN QUIRÚRGICA
         if len(self.onnx_inputs) == 1:
-            # Caso Estándar: El modelo espera una sola matriz gigante (Ej: modelos antiguos)
+            # Si solo hay un tubo (modelos antiguos numéricos)
+            X_data = X.values.astype(np.float32)
+            if len(X_data.shape) == 1:
+                X_data = X_data.reshape(1, -1)
             feed_dict[self.onnx_inputs[0].name] = X_data
         else:
-            # Caso Complejo: El modelo es un Pipeline que exige columnas separadas
+            # Si hay múltiples tubos (Pipelines mixtos con texto)
             for i, inp in enumerate(self.onnx_inputs):
-                # Extraemos la columna 'i' y mantenemos su forma de columna (N, 1)
-                feed_dict[inp.name] = X_data[:, i:i+1]
+                # Extraemos la columna sin alterar su tipo original
+                col_data = X.iloc[:, i].values.reshape(-1, 1)
+                
+                # Leemos qué pide ONNX y hacemos cast seguro
+                if 'string' in inp.type:
+                    feed_dict[inp.name] = col_data.astype(str)
+                elif 'int64' in inp.type:
+                    feed_dict[inp.name] = col_data.astype(np.int64)
+                else:
+                    feed_dict[inp.name] = col_data.astype(np.float32)
 
+        # 3. Inferencia
         outputs = self.session.run(None, feed_dict)
         
         if len(outputs) > 1 and isinstance(outputs[1], (list, np.ndarray, dict)):

@@ -60,7 +60,8 @@ def detect_sklearn_version(model_path: str) -> Optional[str]:
                 
     return detected_version
 
-def orchestrate_conversion(input_path: str, output_path: str) -> None:
+# --- 1. NUEVO: Agregamos dataset_path a la función ---
+def orchestrate_conversion(input_path: str, output_path: str, dataset_path: str) -> None:
     print(f"\n--- Iniciando pipeline agnóstico para: {input_path} ---")
     
     # 1. Detección Ciega
@@ -74,11 +75,11 @@ def orchestrate_conversion(input_path: str, output_path: str) -> None:
         print(f"[Error] No se encontró el archivo: {input_path}")
         sys.exit(1)
 
-    # 3. Construir el Sandbox (¡Aquí faltaba el docker build!)
+    # 3. Construir el Sandbox
     print(f"[+] Construyendo entorno aislado (Sandbox) con scikit-learn=={version}...")
     build_command = [
         "docker", "build", 
-        "-f", "Dockerfile.sandbox",  # Usa el plano correcto
+        "-f", "Dockerfile.sandbox", 
         "--build-arg", f"SKLEARN_VERSION={version}", 
         "-t", image_name, 
         "."
@@ -89,22 +90,23 @@ def orchestrate_conversion(input_path: str, output_path: str) -> None:
     print("[+] Entorno listo. Ejecutando contenedor Sandbox de conversión...")
     run_command = [
         "docker", "run", "--rm",
-        "-v", "xai_shared_data:/shared_uploads", # Montamos el disco duro mágico
+        "-v", "xai_shared_data:/shared_uploads", 
         image_name,
-        # Pasamos estrictamente los parámetros que recibió la función:
         input_path,   
-        output_path   
+        output_path,
+        dataset_path  # --- 2. NUEVO: Pasamos el CSV al contenedor ---
     ]
     subprocess.run(run_command, check=True)
     print("[+] Conversión exitosa. Saliendo del orquestador.")
 
 if __name__ == "__main__":
-    # Esto permite ejecutar el script desde la terminal pasando el origen y el destino
-    if len(sys.argv) != 3:
-        print("Uso: python modelorchestrator.py <ruta_al_modelo.joblib> <ruta_salida.onnx>")
+    # --- 3. NUEVO: Validamos 4 argumentos en lugar de 3 ---
+    if len(sys.argv) != 4:
+        print("Uso: python modelorchestrator.py <ruta_al_modelo.pkl> <ruta_salida.onnx> <ruta_dataset.csv>")
         sys.exit(1)
     
     archivo_entrada = sys.argv[1]
     archivo_salida = sys.argv[2]
+    archivo_dataset = sys.argv[3]
     
-    orchestrate_conversion(archivo_entrada, archivo_salida)
+    orchestrate_conversion(archivo_entrada, archivo_salida, archivo_dataset)
