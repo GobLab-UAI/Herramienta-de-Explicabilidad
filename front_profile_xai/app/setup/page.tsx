@@ -9,47 +9,57 @@ import { Progress } from "@/components/ui/progress"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { FileUploadCard } from "@/components/file-upload-card"
-import { uploadKnowledgeBase, uploadModel, uploadDataset, startProcessing } from "@/lib/mock-api"
+import { uploadKnowledgeBase, uploadModel, uploadDataset, startProcessing, convertModel } from "@/lib/mock-api"
 import { useToast } from "@/hooks/use-toast"
 
 export default function SetupPage() {
   const router = useRouter()
   const { toast } = useToast()
+
   const [knowledgeFiles, setKnowledgeFiles] = useState<File[]>([])
   const [modelFiles, setModelFiles] = useState<File[]>([])
   const [datasetFiles, setDatasetFiles] = useState<File[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
+  const [statusMsg, setStatusMsg] = useState("")
 
-  const readyCount = [knowledgeFiles.length > 0, modelFiles.length > 0, datasetFiles.length > 0].filter(Boolean).length
+  const readyCount = [
+    knowledgeFiles.length > 0,
+    modelFiles.length > 0,
+    datasetFiles.length > 0,
+  ].filter(Boolean).length
   const progress = (readyCount / 3) * 100
   const isReady = readyCount === 3
 
   const handleProcess = async () => {
-    setIsProcessing(true);
-
+    setIsProcessing(true)
     try {
-      console.log("1. Solicitando Job ID al backend...");
-      const job = await startProcessing();
-      
-      console.log("2. Job ID recibido:", job.jobId, " - Subiendo archivos...");
-      await uploadKnowledgeBase(knowledgeFiles);
-      await uploadModel(modelFiles);
-      await uploadDataset(datasetFiles);
-      
-      console.log("3. Archivos subidos con éxito. Redirigiendo a /instance...");
-      router.push("/instance");
-      
+      setStatusMsg("Iniciando sesión...")
+      await startProcessing()
+
+      setStatusMsg("Subiendo archivos...")
+      await Promise.all([
+        uploadKnowledgeBase(knowledgeFiles),
+        uploadDataset(datasetFiles),
+        uploadModel(modelFiles),
+      ])
+
+      setStatusMsg("Convirtiendo modelo (Docker in Docker)...")
+      const result = await convertModel()
+
+      localStorage.setItem("classes_detected", JSON.stringify(result.classes_detected))
+      router.push("/setup/labels")
     } catch (error) {
-      console.error("Error durante el proceso:", error);
+      console.error(error)
       toast({
         title: "Error",
-        description: "Hubo un problema de conexión con el servidor.",
+        description: error instanceof Error ? error.message : "Hubo un problema de conexión con el servidor.",
         variant: "destructive",
-      });
+      })
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false)
+      setStatusMsg("")
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -60,7 +70,7 @@ export default function SetupPage() {
           <div className="space-y-2">
             <h1 className="text-3xl font-bold">Configuración del entorno de explicación</h1>
             <p className="text-muted-foreground">
-              Sube tu base de conocimientos multimodal, archivos del modelo y conjunto de datos de referencia
+              Sube tu base de conocimientos, el modelo y el conjunto de datos de referencia
             </p>
           </div>
 
@@ -74,16 +84,16 @@ export default function SetupPage() {
             />
 
             <FileUploadCard
-              title="2. Modelo de caja negra y preprocesamiento"
-              description="Sube tu modelo entrenado y el pipeline de preprocesamiento"
-              acceptedTypes=".pkl,.h5"
+              title="2. Modelo"
+              description="Sube el archivo del modelo entrenado (.pkl, .joblib, .h5)"
+              acceptedTypes=".pkl,.joblib,.h5"
               files={modelFiles}
               onFilesChange={setModelFiles}
             />
 
             <FileUploadCard
               title="3. Conjunto de datos de referencia"
-              description="Sube el conjunto de datos utilizado para el entrenamiento del modelo o referencia"
+              description="Sube el conjunto de datos utilizado para el entrenamiento del modelo"
               acceptedTypes=".xlsx,.csv"
               files={datasetFiles}
               onFilesChange={setDatasetFiles}
@@ -108,7 +118,7 @@ export default function SetupPage() {
               </Button>
               <Button className="flex-1" disabled={!isReady || isProcessing} onClick={handleProcess}>
                 {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isProcessing ? "Procesando..." : "Procesar"}
+                {isProcessing ? statusMsg || "Procesando..." : "Procesar"}
               </Button>
             </div>
           </Card>

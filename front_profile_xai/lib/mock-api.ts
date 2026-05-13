@@ -86,6 +86,36 @@ export async function uploadModel(files: File[]) {
   return await res.json();
 }
 
+export async function convertModel(): Promise<{ status: string; classes_detected: string[]; n_classes: number }> {
+  const jobId = localStorage.getItem("jobId");
+  const res = await fetch(`${API_BASE_URL}/job/${jobId}/convert`, {
+    method: "POST",
+    headers: { "ngrok-skip-browser-warning": "true" },
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.detail || "Error al convertir el modelo");
+  }
+  return await res.json();
+}
+
+export async function setLabels(labelMap: Record<string, string>) {
+  const jobId = localStorage.getItem("jobId");
+  const res = await fetch(`${API_BASE_URL}/job/${jobId}/labels`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true",
+    },
+    body: JSON.stringify({ labelMap }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.detail || "Error al guardar etiquetas");
+  }
+  return await res.json();
+}
+
 // 7. Generar Explicación (El llamado a LIME en tu backend)
 export async function generateExplanation(profile: string, instance: any) {
   const jobId = localStorage.getItem("jobId");

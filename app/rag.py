@@ -80,6 +80,16 @@ CHAT_SYSTEM_PROMPT = (
 )
 
 
+def _build_label_instruction(label_map: Optional[Dict[str, str]]) -> str:
+    """Returns a strict instruction block so Gemini uses exact label names."""
+    if not label_map:
+        return ""
+    pairs = ", ".join(f'"{k}" → "{v}"' for k, v in label_map.items())
+    return (
+        f"\n[ETIQUETAS DE CLASE — usa SOLO estos nombres, nunca traduzcas ni interpretes IDs numéricos: {pairs}]\n"
+    )
+
+
 class RAGEngine:
     """
     Motor RAG que usa Vertex AI RAG Engine para ingesta/retrieval
@@ -235,13 +245,15 @@ class RAGEngine:
         explanation_data: dict,
         profile: str = "non-expert",
         question: Optional[str] = None,
+        label_map: Optional[Dict[str, str]] = None,
     ) -> str:
         """
         Genera una narrativa en lenguaje natural adaptada al perfil,
         usando contexto recuperado de Vertex AI RAG Engine
         y generación con LangChain + Gemini.
         """
-        explanation_str = json.dumps(explanation_data, indent=2, ensure_ascii=False)
+        label_instruction = _build_label_instruction(label_map)
+        explanation_str = label_instruction + json.dumps(explanation_data, indent=2, ensure_ascii=False)
 
         # Recuperar contexto del corpus
         query = question or f"Explain prediction: {explanation_data.get('prediction', '')}"
@@ -273,7 +285,8 @@ class RAGEngine:
         message: str,
         profile: str = "non-expert",
         history: Optional[List[dict]] = None,
-        explanation_context: str = ""
+        explanation_context: str = "",
+        label_map: Optional[Dict[str, str]] = None,
     ) -> dict:
         """
         Chat interactivo: recupera contexto de Vertex AI RAG Engine,
@@ -282,6 +295,11 @@ class RAGEngine:
         # Recuperar contexto relevante del corpus
         context_chunks = self.retrieve(message)
         context = "\n---\n".join(context_chunks) if context_chunks else "No additional context."
+
+        # Prepend label instruction so Gemini uses exact class names
+        label_instruction = _build_label_instruction(label_map)
+        if label_instruction:
+            explanation_context = label_instruction + explanation_context
 
         history_text = ""
         for msg in history[-10:]:

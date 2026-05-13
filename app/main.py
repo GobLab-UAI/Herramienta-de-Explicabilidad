@@ -87,8 +87,10 @@ async def start_processing():
         "kb_files": [],
         "rag_engine": None,
         "explanation_engine": None,
-        "last_instance": None, 
-        "last_result": None,  
+        "last_instance": None,
+        "last_result": None,
+        "label_map": None,
+        "detected_classes": None,
     }
     return {"jobId": jid, "status": "ready"}
 
@@ -108,7 +110,6 @@ async def upload_files(
         logger.info(f"Recibiendo archivo: {f.filename} para el endpoint: {upload_type}")
         
         path = await save_upload(f, folder)
-        await asyncio.sleep(10)
         saved.append({"name": f.filename, "path": path})
 
         # 2. Hacemos el check en minúsculas para evitar errores
@@ -161,31 +162,71 @@ async def dataset_schema(jobId: str):
         columns.append(item)
 
 
-    ####### OPCIONAL PARA CARGAR MODELO 
-    
-    ruta_actual_modelo = job["model_path"]
-    
-    # Si el modelo sigue siendo un .pkl, significa que no lo hemos convertido aún
-    if ruta_actual_modelo.endswith((".pkl", ".joblib")):
-        logger.info("Primera solicitud de explicación. Iniciando conversión a ONNX...")
-        
-        # Reemplazamos la extensión para crear la nueva ruta
-        onnx_path = ruta_actual_modelo.replace(".pkl", "_agnostico.onnx").replace(".joblib", "_agnostico.onnx")
-        
-        try:
-            # Aquí disparamos el Sandbox de Docker, ya seguros de que el CSV existe
-            orchestrate_conversion(ruta_actual_modelo, onnx_path, job["dataset_csv"])
-            
-            # Actualizamos el job con la nueva ruta para no volver a convertirlo
-            job["model_path"] = onnx_path  
-            logger.info("Conversión exitosa. Listo para explicar.")
-            
-        except Exception as e:
-            logger.error(f"Fallo en el Sandbox durante la conversión: {e}")
-            raise HTTPException(status_code=500, detail=f"Error convirtiendo el modelo: {str(e)}")
-        
-
     return {"columns": columns}
+
+
+# ─── Conversión del modelo y etiquetado ─────────────────────────────────
+
+@app.post("/api/job/{job_id}/convert")
+async def convert_model(job_id: str):
+    """
+    Ejecuta el pipeline docker-in-docker: .pkl → .onnx + metadata.json
+    Devuelve las clases detectadas para que el frontend muestre el formulario
+    de etiquetado.
+    """
+    job = _get_job(job_id)
+
+    if not job.get("model_path") or not job.get("dataset_csv"):
+        raise HTTPException(status_code=400, detail="Se requieren modelo y dataset antes de convertir.")
+
+    model_path: str = job["model_path"]
+    dataset_path: str = job["dataset_csv"]
+
+    # Si ya es .onnx, solo leer metadata si existe
+    if model_path.endswith(".onnx"):
+        meta_path = os.path.splitext(model_path)[0] + ".metadata.json"
+        classes_detected: List[str] = []
+        if os.path.exists(meta_path):
+            with open(meta_path) as f:
+                meta = json.load(f)
+            classes_detected = [str(c) for c in meta.get("classes", [])]
+        job["detected_classes"] = classes_detected
+        return {"status": "ready", "classes_detected": classes_detected, "n_classes": len(classes_detected)}
+
+    model_stem = os.path.splitext(os.path.basename(model_path))[0]
+    onnx_path = os.path.join(os.path.dirname(model_path), f"{model_stem}_agnostico.onnx")
+
+    try:
+        await asyncio.to_thread(orchestrate_conversion, model_path, onnx_path, dataset_path)
+    except Exception as e:
+        logger.error("Error en conversión docker-in-docker: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Conversión fallida: {e}")
+
+    meta_path = os.path.splitext(onnx_path)[0] + ".metadata.json"
+    classes_detected = []
+    if os.path.exists(meta_path):
+        with open(meta_path) as f:
+            meta = json.load(f)
+        classes_detected = [str(c) for c in meta.get("classes", [])]
+
+    job["model_path"] = onnx_path
+    job["detected_classes"] = classes_detected
+    logger.info("Conversión exitosa. Listo para explicar.")
+
+    return {"status": "ready", "classes_detected": classes_detected, "n_classes": len(classes_detected)}
+
+
+@app.post("/api/job/{job_id}/labels")
+async def set_labels(job_id: str, payload: dict):
+    """Guarda el mapeo clase → nombre legible para el job."""
+    job = _get_job(job_id)
+    label_map = payload.get("labelMap", {})
+    if not label_map:
+        raise HTTPException(status_code=400, detail="labelMap no puede estar vacío.")
+    job["label_map"] = label_map
+    # Invalidar engine para que se recree con el nuevo label_map
+    job["explanation_engine"] = None
+    return {"jobId": job_id, "labelMap": label_map, "status": "saved"}
 
 
 # ─── Instancia aleatoria ────────────────────────────────────────────────
@@ -221,15 +262,15 @@ def _get_or_create_engine(job: dict, features: List[str]) -> ExplanationEngine:
         logger.info("Usando motor nativo")
         me = ModelExplainer(pipeline_path=model_path, background_data=bg_data)
 
-    # Refinamiento del mapeo de etiquetas
-    if hasattr(me.model, "classes_"):
-        # Intentamos obtener los nombres reales si están disponibles, 
-        # asegurando que la clave sea el valor original (int o str)
-        label_map = {c: str(c) for c in me.model.classes_}
+    # Prioridad: label_map del usuario → classes del modelo → fallback genérico
+    stored_label_map = job.get("label_map")
+    if stored_label_map:
+        label_map = stored_label_map
+    elif hasattr(me.model, "classes_") and me.model.classes_ is not None:
+        label_map = {str(c): str(c) for c in me.model.classes_}
     else:
-        # Fallback seguro para modelos de regresión o cajas negras sin metadatos
         logger.warning("El modelo no expone clases explícitas. Usando mapeo genérico.")
-        label_map = {0: "Negativo/Clase 0", 1: "Positivo/Clase 1"}
+        label_map = {"0": "Clase 0", "1": "Clase 1"}
 
     engine = ExplanationEngine(
         model_explainer=me,
@@ -287,7 +328,9 @@ async def explain(payload: dict):
         if rag_engine:
             try:
                 natural_text = rag_engine.generate_narrative(
-                    explanation_data=result, profile=profile,
+                    explanation_data=result,
+                    profile=profile,
+                    label_map=job.get("label_map"),
                 )
             except Exception as e:
                 logger.warning("RAG narrative falló: %s", e)
@@ -490,10 +533,11 @@ async def chat(payload: dict):
     if rag_engine:
         try:
             result = rag_engine.chat(
-                message=message, 
-                profile=profile, 
+                message=message,
+                profile=profile,
                 history=history,
-                explanation_context=explanation_context
+                explanation_context=explanation_context,
+                label_map=job.get("label_map"),
             )
             return result
         except Exception as e:

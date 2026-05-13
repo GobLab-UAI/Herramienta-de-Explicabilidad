@@ -60,8 +60,34 @@ def convertir_modelo(ruta_entrada, ruta_salida, ruta_dataset):
 
     with open(ruta_salida, "wb") as f:
         f.write(modelo_onnx.SerializeToString())
-    
+
     print(f"¡Conversión exitosa! ONNX guardado en: {ruta_salida}")
+
+    # ── Exportar metadata.json junto al .onnx ──────────────────────────
+    import json, os
+    metadata = {"task": "unknown"}
+
+    if hasattr(modelo, "classes_"):
+        classes = [str(c) for c in modelo.classes_]
+        metadata = {
+            "task": "classification",
+            "n_classes": len(classes),
+            "classes": classes,
+        }
+        print(f"[+] Metadatos: {len(classes)} clases → {classes}")
+    elif hasattr(modelo, "n_classes_"):
+        metadata = {
+            "task": "classification",
+            "n_classes": int(modelo.n_classes_),
+            "classes": [str(i) for i in range(modelo.n_classes_)],
+        }
+    else:
+        print("[!] No se detectaron clases. El metadata.json indicará tarea desconocida.")
+
+    metadata_path = os.path.splitext(ruta_salida)[0] + ".metadata.json"
+    with open(metadata_path, "w") as f:
+        json.dump(metadata, f, indent=2)
+    print(f"[+] Metadata guardada en: {metadata_path}")
 
 if __name__ == "__main__":
     # ¡IMPORTANTE! Cambiamos a 4 argumentos porque ahora recibe el dataset
