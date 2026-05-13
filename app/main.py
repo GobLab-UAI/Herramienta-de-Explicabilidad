@@ -121,11 +121,24 @@ async def upload_files(
 
         elif upload_type == "model" and nombre_archivo.endswith((".pkl", ".joblib")):
             job["model_path"] = path
-    
 
-    
         elif upload_type == "knowledge-base":
             job["kb_files"].append(path)
+
+    
+
+        # Inicializar RAG si está disponible
+    if upload_type == "knowledge-base" and job["kb_files"] and HAS_RAG:
+        try:
+            if job["rag_engine"] is None:
+                job["rag_engine"] = RAGEngine()
+            n = job["rag_engine"].ingest(job["kb_files"])
+            logger.info("RAG: %d archivos indexados para job %s", n, jobId)
+        except Exception as e:
+            logger.warning("RAG no pudo inicializarse: %s", e)
+
+    return {"jobId": jobId, "uploaded": saved}
+
 
 
 
