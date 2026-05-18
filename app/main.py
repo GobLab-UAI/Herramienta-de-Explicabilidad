@@ -151,7 +151,7 @@ async def dataset_schema(jobId: str):
     if not job.get("dataset_csv"):
         return {"columns": []}
 
-    df = pd.read_csv(job["dataset_csv"])
+    df = pd.read_csv(job["dataset_csv"], sep=None, engine="python")
     columns: list[dict] = []
     for col in df.columns:
         ctype = infer_column_type(df[col])
@@ -237,7 +237,7 @@ async def random_instance(jobId: str):
     if not job.get("dataset_csv"):
         raise HTTPException(status_code=400, detail="Dataset no subido.")
 
-    df = pd.read_csv(job["dataset_csv"], nrows=500)
+    df = pd.read_csv(job["dataset_csv"], sep=None, engine="python", nrows=500)
     row = df.sample(1).iloc[0].to_dict()
     return {k: (None if pd.isna(v) else v) for k, v in row.items()}
 
@@ -249,7 +249,7 @@ def _get_or_create_engine(job: dict, features: List[str]) -> ExplanationEngine:
     if job["explanation_engine"] is not None:
         return job["explanation_engine"]
     
-    df = pd.read_csv(job["dataset_csv"])
+    df = pd.read_csv(job["dataset_csv"], sep=None, engine="python")
     bg_data = df[features].sample(n=70, random_state=42) if len(df) > 100 else df[features]
 
     # --- RUTEO INTELIGENTE ---

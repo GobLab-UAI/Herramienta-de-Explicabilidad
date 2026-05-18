@@ -43,7 +43,7 @@ PROFILE_PROMPTS = {
         "Datos de la explicación:\n{explanation}\n\n"
         "Pregunta: {question}\n\n"
         "Proporciona una explicación técnica exhaustiva en ESPAÑOL."
-        "REGLA ESTRICTA: Tu respuesta NO debe superar las 3 oraciones ni los 200 caracteres."
+        "REGLA ESTRICTA: Tu respuesta NO debe superar los 300 caracteres."
     ),
     "domain-expert": (
         "Eres un asistente de IA hablando con un experto del dominio (ej. un médico o ingeniero).\n"
@@ -53,7 +53,7 @@ PROFILE_PROMPTS = {
         "Datos de la explicación:\n{explanation}\n\n"
         "Pregunta: {question}\n\n"
         "Proporciona una explicación clara orientada al dominio en ESPAÑOL."
-        "REGLA ESTRICTA: Ve directo al grano. Máximo 2 oraciones y 150 caracteres."
+        "REGLA ESTRICTA: Ve directo al grano. Máximo 400 caracteres."
     ),
     "non-expert": (
         "Eres un asistente de IA amigable que explica resultados a alguien sin formación técnica.\n"
@@ -63,7 +63,7 @@ PROFILE_PROMPTS = {
         "Datos de la explicación:\n{explanation}\n\n"
         "Pregunta: {question}\n\n"
         "Explica esto en términos simples y fáciles de entender en ESPAÑOL."
-        "REGLA ESTRICTA: Explícalo como un titular breve y una analogía corta. Máximo 150 caracteres."
+        "REGLA ESTRICTA: Explícalo como un titular breve y una analogía clara. Máximo 400 caracteres."
     ),
 }
 

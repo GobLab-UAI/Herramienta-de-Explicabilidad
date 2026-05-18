@@ -13,10 +13,10 @@ services:
       # 2. El disco duro compartido para los archivos subidos:
       - xai_shared_data:/shared_uploads
     environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
-      - GOOGLE_CLOUD_PROJECT=project-d2a03bd2-741f-44e7-80a # Cambia por tu ID de GCP
-      - SHAP_NSAMPLES: "100"
-      - SHAP_BACKGROUND_SIZE: "150"
+      - GOOGLE_APPLICATION_CREDENTIALS:/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT:project-d2a03bd2-741f-44e7-80a # Cambia por tu ID de GCP
+      - SHAP_NSAMPLES:100
+      - SHAP_BACKGROUND_SIZE:150
     depends_on:
       - frontend # Opcional, dependiendo de tu lógica
 
