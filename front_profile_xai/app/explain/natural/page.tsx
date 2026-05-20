@@ -16,18 +16,21 @@ export default function NaturalExplanationPage() {
   const profile = searchParams.get("profile") as UserProfile
 
   const [explanation, setExplanation] = useState<string>("")
+  const [fullContext, setFullContext] = useState<string>("")
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isChatLoading, setIsChatLoading] = useState(false)
 
 useEffect(() => {
-    // 1. Recuperamos la instancia de la memoria del navegador
     const savedInstanceString = localStorage.getItem("currentInstance");
     const instanceData = savedInstanceString ? JSON.parse(savedInstanceString) : {};
 
-    // 2. Llamamos al backend con el perfil correcto y los datos reales
     generateExplanation(profile || "non-expert", instanceData).then((result) => {
-      setExplanation(result.natural || "No se pudo generar una explicación natural.")
+      const naturalText = result.natural || "No se pudo generar una explicación natural."
+      setExplanation(naturalText)
+      // Contexto completo para el chat: narrativa + datos técnicos crudos (SHAP, LIME, métricas)
+      const technicalText = result.technical ? JSON.stringify(result.technical) : ""
+      setFullContext(`${naturalText}\n\nDatos técnicos de la explicación:\n${technicalText}`)
       setIsLoading(false)
     }).catch(err => {
       console.error(err);
@@ -45,8 +48,7 @@ useEffect(() => {
     setMessages([...messages, userMessage])
     setIsChatLoading(true)
 
-    // TODO: Google RAG: send conversation + retrieved references (Drive/GCS) to /chat endpoint
-    const response = await chatRag(message, messages)
+    const response = await chatRag(message, messages, fullContext, profile || "non-expert")
 
     const assistantMessage: ChatMessage = {
       role: "assistant",

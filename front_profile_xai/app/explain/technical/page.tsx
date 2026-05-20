@@ -48,7 +48,8 @@ export default function TechnicalExplanationPage() {
     setMessages([...messages, userMessage])
     setIsChatLoading(true)
 
-    const response = await chatRag(message, messages)
+    const explanationText = data ? JSON.stringify(data) : ""
+    const response = await chatRag(message, messages, explanationText, "data-scientist")
 
     const assistantMessage: ChatMessage = {
       role: "assistant",
