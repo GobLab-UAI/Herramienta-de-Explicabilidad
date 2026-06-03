@@ -10,7 +10,9 @@ import json
 import os
 import uuid
 import logging
-import gc 
+import gc
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import joblib
@@ -18,6 +20,8 @@ import numpy as np
 import pandas as pd
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
 import asyncio
 
 from app.config import settings
@@ -551,3 +555,178 @@ async def chat(payload: dict):
         ),
         "sources": [],
     }
+
+
+# ─── Feedback ────────────────────────────────────────────────────────────────
+
+FEEDBACK_DIR = Path(__file__).parent.parent / "feedback_reports"
+FEEDBACK_DIR.mkdir(exist_ok=True)
+
+
+class FeedbackRequest(BaseModel):
+    # Metadatos
+    timestamp: str
+    usuario: str = "Anónimo"
+    # Paso 1 — Perfil + Likert
+    perfil: str
+    q1_1: int; q1_2: int; q1_3: int   # Dimensión 1
+    q2_1: int; q2_2: int; q2_3: int   # Dimensión 2
+    q3_1: int; q3_2: int               # Dimensión 3
+    # Paso 2 — Cualitativo
+    q_confuso: str = ""
+    q_info_adicional: str = ""
+    q_mejoras: str = ""
+    # Paso 3 — Comentarios generales
+    organizacion: str = ""
+    categoria: str = "Comentario general"
+    comentarios: str = ""
+
+
+def _sanitize(text: str) -> str:
+    """Replace characters outside Latin-1 with safe ASCII equivalents."""
+    replacements = {
+        "–": "-", "—": "-",   # en/em dash
+        "‘": "'", "’": "'",   # curly single quotes
+        "“": '"', "”": '"',   # curly double quotes
+        "…": "...",                # ellipsis
+        "°": " grados",            # degree sign (already latin-1, just in case)
+    }
+    for src, dst in replacements.items():
+        text = text.replace(src, dst)
+    # Drop any remaining characters outside latin-1
+    return text.encode("latin-1", errors="replace").decode("latin-1")
+
+
+def _build_feedback_pdf(data: FeedbackRequest) -> Path:
+    """Genera un PDF con las respuestas del formulario y lo guarda en FEEDBACK_DIR."""
+    from fpdf import FPDF
+
+    LIKERT_LABELS = {1: "1 - Muy en desacuerdo", 2: "2", 3: "3 - Neutral", 4: "4", 5: "5 - Muy de acuerdo"}
+    PERFIL_LABELS = {
+        "data-scientist": "Especialista en IA / Data Scientist",
+        "domain-expert": "Experto en el Dominio (médico / funcionario)",
+        "non-expert": "Usuario General",
+    }
+
+    class PDF(FPDF):
+        def header(self):
+            self.set_font("Helvetica", "B", 13)
+            self.cell(0, 8, "ProfileXAI - Evaluacion de Usuario", align="C", new_x="LMARGIN", new_y="NEXT")
+            self.set_font("Helvetica", "", 9)
+            self.cell(0, 5, "Herramienta de Explicabilidad (Piloto SUSESO)", align="C", new_x="LMARGIN", new_y="NEXT")
+            self.ln(3)
+            self.set_draw_color(180, 180, 180)
+            self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
+            self.ln(4)
+
+        def footer(self):
+            self.set_y(-14)
+            self.set_font("Helvetica", "I", 8)
+            self.set_text_color(130, 130, 130)
+            self.cell(0, 8, f"Pagina {self.page_no()} | Generado por ProfileXAI", align="C")
+
+        def section_title(self, title: str):
+            self.ln(3)
+            self.set_font("Helvetica", "B", 11)
+            self.set_fill_color(240, 245, 255)
+            self.set_text_color(30, 60, 120)
+            self.cell(0, 8, title, fill=True, new_x="LMARGIN", new_y="NEXT")
+            self.set_text_color(0, 0, 0)
+            self.ln(2)
+
+        def qa_row(self, question: str, answer: str):
+            self.set_font("Helvetica", "", 9)
+            self.set_text_color(60, 60, 60)
+            self.multi_cell(0, 5, question, new_x="LMARGIN", new_y="NEXT")
+            self.set_font("Helvetica", "B", 10)
+            self.set_text_color(0, 0, 0)
+            self.multi_cell(0, 5, answer or "(sin respuesta)", new_x="LMARGIN", new_y="NEXT")
+            self.ln(2)
+
+    pdf = PDF(orientation="P", unit="mm", format="A4")
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_margins(18, 18, 18)
+
+    # Sanitize all user text fields
+    s = _sanitize
+
+    # ── Metadatos ──────────────────────────────────────────────────
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(80, 80, 80)
+    pdf.cell(0, 5, s(f"Fecha y hora: {data.timestamp}"), new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, s(f"Usuario: {data.usuario}"), new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, s(f"Perfil: {PERFIL_LABELS.get(data.perfil, data.perfil)}"), new_x="LMARGIN", new_y="NEXT")
+    if data.organizacion:
+        pdf.cell(0, 5, s(f"Organizacion: {data.organizacion}"), new_x="LMARGIN", new_y="NEXT")
+    pdf.set_text_color(0, 0, 0)
+
+    # ── Dimensión 1 ────────────────────────────────────────────────
+    pdf.section_title("Dimension 1 - Calidad de la Explicacion")
+    pdf.qa_row("La explicacion me ayudo a entender como funciona el modelo de licencias medicas.",
+               LIKERT_LABELS.get(data.q1_1, str(data.q1_1)))
+    pdf.qa_row("La explicacion contiene suficiente detalle para realizar mi trabajo.",
+               LIKERT_LABELS.get(data.q1_2, str(data.q1_2)))
+    pdf.qa_row("La explicacion fue precisa y coherente con la normativa.",
+               LIKERT_LABELS.get(data.q1_3, str(data.q1_3)))
+
+    # ── Dimensión 2 ────────────────────────────────────────────────
+    pdf.section_title("Dimension 2 - Satisfaccion y Confianza")
+    pdf.qa_row("Me siento satisfecho con la herramienta ProfileXAI.",
+               LIKERT_LABELS.get(data.q2_1, str(data.q2_1)))
+    pdf.qa_row("Confio en la evaluacion que hizo el sistema sobre la licencia.",
+               LIKERT_LABELS.get(data.q2_2, str(data.q2_2)))
+    pdf.qa_row("Usaria esta herramienta para apoyar mis decisiones futuras.",
+               LIKERT_LABELS.get(data.q2_3, str(data.q2_3)))
+
+    # ── Dimensión 3 ────────────────────────────────────────────────
+    pdf.section_title("Dimension 3 - Adaptabilidad")
+    pdf.qa_row("El lenguaje utilizado fue apropiado para mi nivel de conocimiento tecnico.",
+               LIKERT_LABELS.get(data.q3_1, str(data.q3_1)))
+    pdf.qa_row("La cantidad de informacion mostrada fue adecuada.",
+               LIKERT_LABELS.get(data.q3_2, str(data.q3_2)))
+
+    # ── Evaluación cualitativa ────────────────────────────────────
+    pdf.section_title("Evaluacion Cualitativa")
+    pdf.qa_row("Terminos tecnicos o graficos que resultaron confusos:", s(data.q_confuso))
+    pdf.qa_row("Informacion adicional que hubiera gustado ver:", s(data.q_info_adicional))
+    pdf.qa_row("Partes no intuitivas y sugerencias de mejora:", s(data.q_mejoras))
+
+    # ── Comentarios generales ─────────────────────────────────────
+    pdf.section_title("Comentarios Generales")
+    pdf.qa_row(s(f"Categoria: {data.categoria}"), "")
+    pdf.qa_row("Comentarios:", s(data.comentarios))
+
+    # Guardar
+    filename = f"feedback_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}.pdf"
+    out_path = FEEDBACK_DIR / filename
+    pdf.output(str(out_path))
+    return out_path
+
+
+@app.post("/api/feedback")
+async def submit_feedback(payload: FeedbackRequest):
+    """Recibe el formulario de evaluación, genera un PDF y lo guarda en el servidor."""
+    try:
+        out_path = _build_feedback_pdf(payload)
+        logger.info("Feedback guardado: %s", out_path.name)
+        return {"success": True, "file": out_path.name, "message": "Feedback registrado correctamente."}
+    except Exception as e:
+        logger.error("Error generando PDF de feedback: %s", e)
+        raise HTTPException(status_code=500, detail=f"Error al guardar feedback: {e}")
+
+
+@app.get("/api/feedback")
+async def list_feedbacks():
+    """Lista los archivos de feedback guardados en el servidor."""
+    files = sorted(FEEDBACK_DIR.glob("*.pdf"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return {"files": [f.name for f in files], "count": len(files)}
+
+
+@app.get("/api/feedback/{filename}")
+async def download_feedback(filename: str):
+    """Descarga un PDF de feedback específico."""
+    path = FEEDBACK_DIR / filename
+    if not path.exists() or not path.suffix == ".pdf":
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    return FileResponse(path=str(path), media_type="application/pdf", filename=filename)

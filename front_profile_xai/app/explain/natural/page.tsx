@@ -28,9 +28,11 @@ useEffect(() => {
     generateExplanation(profile || "non-expert", instanceData).then((result) => {
       const naturalText = result.natural || "No se pudo generar una explicación natural."
       setExplanation(naturalText)
-      // Contexto completo para el chat: narrativa + datos técnicos crudos (SHAP, LIME, métricas)
+      // Contexto completo para el chat: narrativa + convención SHAP + datos técnicos crudos
       const technicalText = result.technical ? JSON.stringify(result.technical) : ""
-      setFullContext(`${naturalText}\n\nDatos técnicos de la explicación:\n${technicalText}`)
+      const predictedLabel = result.label ?? result.prediction ?? "la clase predicha"
+      const shapNote = `NOTA IMPORTANTE SOBRE LOS VALORES SHAP: Los valores SHAP corresponden a la clase PREDICHA ("${predictedLabel}"). Un valor SHAP positivo significa que esa variable empujó la predicción HACIA "${predictedLabel}". Un valor SHAP negativo significa que esa variable se opuso a "${predictedLabel}". El signo siempre es relativo a la clase predicha, no a una clase fija.`
+      setFullContext(`${naturalText}\n\n${shapNote}\n\nDatos técnicos de la explicación:\n${technicalText}`)
       setIsLoading(false)
     }).catch(err => {
       console.error(err);

@@ -84,17 +84,16 @@ class ExplanationEngine:
         self.preproc = self.me.preprocessor if hasattr(self.me, "preprocessor") else None
 
     def _setup_anchor(self) -> None:
-        encoder = None
-        if self.preproc is not None:
-            encoder = lambda X: self.preproc.transform(
-                pd.DataFrame(X, columns=self.feature_names)
-            )
+        # No encoder_fn: Anchor defaults to identity, so classifier_fn receives
+        # the integer-coded array directly. _lime_predict_fn handles the
+        # decoding (codes → original strings) before calling the sklearn Pipeline.
+        # Passing preproc.transform as encoder_fn fails because OrdinalEncoder
+        # fitted on strings raises "isnan not supported" when given integer codes.
         self.anchor_explainer = AnchorTabularExplainer(
             class_names=self.class_names,
             feature_names=self.feature_names,
             train_data=self.train_data,
             categorical_names=self.cat_names,
-            **({"encoder_fn": encoder} if encoder else {}),
         )
 
     def _setup_lime(self) -> None:
@@ -186,7 +185,7 @@ class ExplanationEngine:
 
         exp = self.anchor_explainer.explain_instance(
             x,
-            lambda z: self.me.model.predict_proba(z)[:, idx_pred],
+            lambda z: np.argmax(self._lime_predict_fn(z), axis=1),
             threshold=threshold, delta=delta, batch_size=batch_size,
         )
 
@@ -280,7 +279,7 @@ class ExplanationEngine:
 
         # ANCHOR
         anc = self.anchor_explainer.explain_instance(
-            x, lambda z: self.me.model.predict_proba(z)[:, cls],
+            x, lambda z: np.argmax(self._lime_predict_fn(z), axis=1),
             threshold=0.90, delta=0.15, batch_size=256,
         )
         anchor_vals = self._get_active_vector(set(anc.names()))
@@ -440,7 +439,7 @@ class ExplanationEngine:
                         a_p[self.feature_names.index(feat)] = w
             else:
                 anc = self.anchor_explainer.explain_instance(
-                    x_p, lambda z: self.me.model.predict_proba(z)[:, cls],
+                    x_p, lambda z: np.argmax(self._lime_predict_fn(z), axis=1),
                     threshold=0.95, delta=0.1, batch_size=50,
                 )
                 a_p = self._get_active_vector(set(anc.names()))

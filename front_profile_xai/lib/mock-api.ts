@@ -6,6 +6,37 @@ export interface InstanceData { [key: string]: string | number; }
 export type UserProfile = "data-scientist" | "domain-expert" | "non-expert";
 export interface ChatMessage { role: "user" | "assistant"; content: string; timestamp: Date; }
 
+export interface FeedbackPayload {
+  timestamp: string
+  usuario: string
+  perfil: string
+  q1_1: number; q1_2: number; q1_3: number
+  q2_1: number; q2_2: number; q2_3: number
+  q3_1: number; q3_2: number
+  q_confuso: string
+  q_info_adicional: string
+  q_mejoras: string
+  organizacion: string
+  categoria: string
+  comentarios: string
+}
+
+export async function submitFeedback(payload: FeedbackPayload): Promise<{ success: boolean; file: string; message: string }> {
+  const res = await fetch(`${API_BASE_URL}/feedback`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true",
+    },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || "Error al enviar feedback")
+  }
+  return res.json()
+}
+
 export async function startProcessing() {
   const res = await fetch(`${API_BASE_URL}/processing/start`, { 
     method: "POST",
