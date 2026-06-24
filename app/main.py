@@ -18,21 +18,26 @@ from typing import Any, Dict, List, Optional
 import joblib
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 import asyncio
 
 from app.config import settings
 from app.utils import infer_column_type, save_upload
 from app.explanation import ExplanationEngine
-from app.modelorchestrator import orchestrate_conversion
+from app.converter_client import get_converter
 from app.modeling import ModelExplainer, AgnosticModelExplainer
+from app.security import scan_pickle, patch_safe_loader
 
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+# Capa 2 activa desde el primer import: joblib.load() queda restringido
+patch_safe_loader()
 
 # ── Detectar si RAG está disponible ──────────────────────────────────────
 HAS_RAG = False
@@ -51,15 +56,63 @@ app = FastAPI(
     description="API de explicabilidad adaptativa — SHAP, LIME, Anchor + RAG + Chat",
 )
 
+# ── Middleware de API Key ────────────────────────────────────────────────
+# Rutas públicas que NO requieren autenticación (health check y OPTIONS)
+_PUBLIC_PATHS = {"/", "/docs", "/openapi.json", "/redoc"}
+
+class _APIKeyMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if not settings.API_KEY:
+            # Sin API_KEY configurada → modo desarrollo, sin restricción
+            return await call_next(request)
+        if request.method == "OPTIONS" or request.url.path in _PUBLIC_PATHS:
+            return await call_next(request)
+        key = request.headers.get("X-API-Key", "")
+        if key != settings.API_KEY:
+            return JSONResponse(status_code=401, content={"detail": "API Key inválida o ausente."})
+        return await call_next(request)
+
+app.add_middleware(_APIKeyMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=False,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*", "X-API-Key"],
 )
 
 JOB_STORE: Dict[str, Dict[str, Any]] = {}
+
+# Límite máximo de jobs simultáneos en memoria y TTL en segundos (2 horas)
+_JOB_MAX = int(os.getenv("JOB_MAX", "50"))
+_JOB_TTL = int(os.getenv("JOB_TTL_SECONDS", "7200"))
+
+
+def _purge_expired_jobs() -> None:
+    """Elimina jobs expirados y recorta si se supera el límite máximo."""
+    now = datetime.utcnow().timestamp()
+    expired = [jid for jid, j in JOB_STORE.items() if now - j.get("_created_at", now) > _JOB_TTL]
+    for jid in expired:
+        JOB_STORE.pop(jid, None)
+        logger.info("Job expirado eliminado: %s", jid)
+
+    # Si aún supera el límite, eliminar los más antiguos
+    if len(JOB_STORE) >= _JOB_MAX:
+        sorted_jobs = sorted(JOB_STORE.items(), key=lambda x: x[1].get("_created_at", 0))
+        for jid, _ in sorted_jobs[:len(JOB_STORE) - _JOB_MAX + 1]:
+            JOB_STORE.pop(jid, None)
+            logger.info("Job eliminado por límite de capacidad: %s", jid)
+
+
+# ─── Manejador global de errores 500 ────────────────────────────────────
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.error("Unhandled error [%s %s]: %s", request.method, request.url.path, exc, exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno del servidor. Por favor intente más tarde."},
+    )
 
 
 def _get_job(job_id: str) -> Dict[str, Any]:
@@ -84,8 +137,12 @@ async def health():
 
 @app.post("/api/processing/start")
 async def start_processing():
+    _purge_expired_jobs()
+    if len(JOB_STORE) >= _JOB_MAX:
+        raise HTTPException(status_code=503, detail="Capacidad máxima de sesiones alcanzada. Intente más tarde.")
     jid = f"job_{uuid.uuid4().hex[:8]}"
     JOB_STORE[jid] = {
+        "_created_at": datetime.utcnow().timestamp(),
         "dataset_csv": None,
         "model_path": None,
         "kb_files": [],
@@ -125,7 +182,19 @@ async def upload_files(
             logger.info(f"¡ÉXITO! Dataset detectado y guardado en memoria: {path}")
 
         elif upload_type == "model" and nombre_archivo.endswith((".pkl", ".joblib")):
+            # ── CAPA 1: Scan estático del pickle antes de registrar el path ──
+            is_safe, reason = scan_pickle(path)
+            if not is_safe:
+                import os as _os
+                _os.remove(path)  # borrar el archivo sospechoso del disco
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"El archivo de modelo fue rechazado por el análisis de seguridad: {reason}",
+                )
             job["model_path"] = path
+
+        elif upload_type == "model" and nombre_archivo.endswith(".onnx"):
+            job["model_path"] = path  # ONNX es seguro por diseño (no es pickle)
 
         elif upload_type == "knowledge-base":
             job["kb_files"].append(path)
@@ -201,9 +270,9 @@ async def convert_model(job_id: str):
     onnx_path = os.path.join(os.path.dirname(model_path), f"{model_stem}_agnostico.onnx")
 
     try:
-        await asyncio.to_thread(orchestrate_conversion, model_path, onnx_path, dataset_path)
+        await get_converter().convert(model_path, onnx_path, dataset_path)
     except Exception as e:
-        logger.error("Error en conversión docker-in-docker: %s", e, exc_info=True)
+        logger.error("Error en conversión: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Conversión fallida: {e}")
 
     meta_path = os.path.splitext(onnx_path)[0] + ".metadata.json"
@@ -364,7 +433,7 @@ async def explain(payload: dict):
 
     except Exception as e:
         logger.error("Error en explain: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error procesando la explicación. Por favor intente más tarde.")
 
 def _build_narrative(result: dict, profile: str) -> str:
     pred = result.get("prediction", "?")
@@ -597,8 +666,8 @@ def _sanitize(text: str) -> str:
     return text.encode("latin-1", errors="replace").decode("latin-1")
 
 
-def _build_feedback_pdf(data: FeedbackRequest) -> Path:
-    """Genera un PDF con las respuestas del formulario y lo guarda en FEEDBACK_DIR."""
+def _build_feedback_pdf(data: FeedbackRequest, out_path: Path) -> None:
+    """Genera el PDF de feedback y lo escribe en out_path."""
     from fpdf import FPDF
 
     LIKERT_LABELS = {1: "1 - Muy en desacuerdo", 2: "2", 3: "3 - Neutral", 4: "4", 5: "5 - Muy de acuerdo"}
@@ -697,36 +766,83 @@ def _build_feedback_pdf(data: FeedbackRequest) -> Path:
     pdf.qa_row(s(f"Categoria: {data.categoria}"), "")
     pdf.qa_row("Comentarios:", s(data.comentarios))
 
-    # Guardar
-    filename = f"feedback_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}.pdf"
-    out_path = FEEDBACK_DIR / filename
     pdf.output(str(out_path))
-    return out_path
 
 
 @app.post("/api/feedback")
 async def submit_feedback(payload: FeedbackRequest):
-    """Recibe el formulario de evaluación, genera un PDF y lo guarda en el servidor."""
+    """Genera el PDF de evaluación y lo guarda en GCS (producción) o en disco (local)."""
+    filename = f"feedback_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}.pdf"
+    tmp_path = Path("/tmp") / filename
     try:
-        out_path = _build_feedback_pdf(payload)
-        logger.info("Feedback guardado: %s", out_path.name)
-        return {"success": True, "file": out_path.name, "message": "Feedback registrado correctamente."}
+        _build_feedback_pdf(payload, tmp_path)
+
+        if settings.GCS_BUCKET:
+            from google.cloud import storage as gcs
+            bucket = gcs.Client().bucket(settings.GCS_BUCKET)
+            bucket.blob(f"feedback/{filename}").upload_from_filename(
+                str(tmp_path), content_type="application/pdf"
+            )
+            logger.info("Feedback subido a GCS: gs://%s/feedback/%s", settings.GCS_BUCKET, filename)
+        else:
+            tmp_path.rename(FEEDBACK_DIR / filename)
+            logger.info("Feedback guardado localmente: %s", filename)
+
+        return {"success": True, "file": filename, "message": "Feedback registrado correctamente."}
     except Exception as e:
         logger.error("Error generando PDF de feedback: %s", e)
         raise HTTPException(status_code=500, detail=f"Error al guardar feedback: {e}")
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink(missing_ok=True)
 
 
 @app.get("/api/feedback")
 async def list_feedbacks():
-    """Lista los archivos de feedback guardados en el servidor."""
+    """Lista los archivos de feedback (GCS en producción, disco en local)."""
+    if settings.GCS_BUCKET:
+        from google.cloud import storage as gcs
+        blobs = gcs.Client().list_blobs(settings.GCS_BUCKET, prefix="feedback/")
+        files = sorted(
+            [b.name.split("/")[-1] for b in blobs if b.name.endswith(".pdf")],
+            reverse=True,
+        )
+        return {"files": files, "count": len(files), "storage": "gcs"}
+
     files = sorted(FEEDBACK_DIR.glob("*.pdf"), key=lambda p: p.stat().st_mtime, reverse=True)
-    return {"files": [f.name for f in files], "count": len(files)}
+    return {"files": [f.name for f in files], "count": len(files), "storage": "local"}
 
 
 @app.get("/api/feedback/{filename}")
 async def download_feedback(filename: str):
-    """Descarga un PDF de feedback específico."""
-    path = FEEDBACK_DIR / filename
-    if not path.exists() or not path.suffix == ".pdf":
-        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    """Descarga un PDF de feedback (GCS en producción, disco en local)."""
+    # C3: rechazar separadores de ruta antes de construir cualquier path
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Nombre de archivo inválido.")
+    if not filename.endswith(".pdf"):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado.")
+
+    if settings.GCS_BUCKET:
+        from google.cloud import storage as gcs
+        blob = gcs.Client().bucket(settings.GCS_BUCKET).blob(f"feedback/{filename}")
+        if not blob.exists():
+            raise HTTPException(status_code=404, detail="Archivo no encontrado.")
+
+        def _stream():
+            with blob.open("rb") as f:
+                while chunk := f.read(65_536):
+                    yield chunk
+
+        return StreamingResponse(
+            _stream(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    # Local: C3 — verificar que el path resuelto siga dentro de FEEDBACK_DIR
+    path = (FEEDBACK_DIR / filename).resolve()
+    if not path.is_relative_to(FEEDBACK_DIR.resolve()):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado.")
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Archivo no encontrado.")
     return FileResponse(path=str(path), media_type="application/pdf", filename=filename)

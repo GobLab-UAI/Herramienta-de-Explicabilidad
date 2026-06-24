@@ -370,7 +370,8 @@ class ExplanationEngine:
         return {
             "method_used": primary_method,
             "prediction": str(predicted_class),
-            "label": self.label_map.get(predicted_class, str(predicted_class)),            "confidence": round(probability * 100, 2),
+            "label": self.label_map.get(str(predicted_class), str(predicted_class)),
+            "confidence": round(probability * 100, 2),
             "explanations": explanations, # Enviamos el diccionario con los 3
             "metrics": None, # Desactivamos métricas temporalmente para ahorrar RAM
         }
@@ -472,7 +473,7 @@ class ExplanationEngine:
                     "model_output": {
                         "predicted_class": predicted_class,
                         "probability": probability,
-                        "label": self.label_map.get(predicted_class, str(predicted_class)),
+                        "label": self.label_map.get(str(predicted_class), str(predicted_class)),
                     }
                 }
 

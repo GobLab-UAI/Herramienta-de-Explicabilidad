@@ -7,7 +7,11 @@ from __future__ import annotations
 
 import joblib
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
+
+# Activar SafeUnpickler antes de cualquier joblib.load() en este módulo
+from app.security import patch_safe_loader as _patch
+_patch()
 
 import numpy as np
 import pandas as pd

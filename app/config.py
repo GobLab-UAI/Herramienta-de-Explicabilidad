@@ -12,8 +12,13 @@ class Settings:
     # ── Servidor ─────────────────────────────────────────────────────────
     PORT: int = int(os.getenv("PORT", "8000"))
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "/shared_uploads")
+    # CORS_ORIGINS: lista separada por comas en la variable de entorno.
+    # En local sin variable → permite cualquier origen (desarrollo).
+    # En producción DEBE setearse: CORS_ORIGINS=https://miapp.com,https://www.miapp.com
     CORS_ORIGINS: List[str] = field(default_factory=lambda: [
-        os.getenv("CORS_ORIGIN", "*")
+        o.strip()
+        for o in os.getenv("CORS_ORIGINS", os.getenv("CORS_ORIGIN", "*")).split(",")
+        if o.strip()
     ])
 
     # ── Google Cloud / Vertex AI ────────────────────────────────────────
@@ -37,6 +42,19 @@ class Settings:
     RAG_VECTOR_DISTANCE_THRESHOLD: float = float(os.getenv("RAG_VECTOR_DISTANCE_THRESHOLD", "0.3"))
     RAG_CHUNK_SIZE: int = int(os.getenv("RAG_CHUNK_SIZE", "512"))
     RAG_CHUNK_OVERLAP: int = int(os.getenv("RAG_CHUNK_OVERLAP", "100"))
+
+    # ── Conversión de modelos ────────────────────────────────────────────
+    # "docker"     → microservicio converter local (docker-compose)
+    # "cloudbuild" → Google Cloud Build API (Cloud Run / producción)
+    CONVERTER_BACKEND: str = os.getenv("CONVERTER_BACKEND", "docker")
+    CONVERTER_URL: str = os.getenv("CONVERTER_URL", "http://converter:8001")
+    # Bucket de GCS requerido cuando CONVERTER_BACKEND=cloudbuild
+    GCS_BUCKET: str = os.getenv("GCS_BUCKET", "")
+
+    # ── Autenticación ────────────────────────────────────────────────────
+    # Si está vacío, la autenticación queda desactivada (desarrollo local).
+    # En producción DEBE setearse: API_KEY=<secreto-largo-aleatorio>
+    API_KEY: str = os.getenv("API_KEY", "")
 
     # ── XAI ─────────────────────────────────────────────────────────────
     SHAP_BACKGROUND_SIZE: int = int(os.getenv("SHAP_BACKGROUND_SIZE", "50"))

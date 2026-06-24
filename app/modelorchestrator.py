@@ -7,6 +7,10 @@ import sklearn
 import subprocess
 from typing import Optional
 
+# Activar SafeUnpickler antes de cualquier joblib.load() en este módulo
+from app.security import patch_safe_loader as _patch
+_patch()
+
 
 # ── Información completa del modelo ─────────────────────────────────────────
 
