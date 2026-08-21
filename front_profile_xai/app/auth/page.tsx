@@ -25,7 +25,7 @@ export default function AuthPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <Button variant="outline" className="w-full bg-transparent" asChild>
-                <Link href="/setup">Continue con Google</Link>
+                <Link href="/profile-select">Continue con Google</Link>
               </Button>
 
               <div className="relative">
@@ -43,7 +43,7 @@ export default function AuthPage() {
               </div>
 
               <Button className="w-full" asChild>
-                <Link href="/setup">Continue</Link>
+                <Link href="/profile-select">Continue</Link>
               </Button>
 
               <div className="relative">
@@ -56,7 +56,7 @@ export default function AuthPage() {
               </div>
 
               <Button variant="secondary" className="w-full" asChild>
-                <Link href="/setup">Continuar como invitado</Link>
+                <Link href="/profile-select">Continuar como invitado</Link>
               </Button>
             </CardContent>
           </Card>

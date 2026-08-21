@@ -12,6 +12,7 @@ services:
       - ./app:/src/app
       - xai_shared_data:/shared_uploads
       - ./feedback_reports:/src/feedback_reports   # persiste PDFs en local (GCS en producción)
+      - ~/.config/gcloud:/root/.config/gcloud:ro   # credenciales ADC del host (solo lectura)
       # /var/run/docker.sock REMOVIDO — el backend nunca habla con Docker
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json

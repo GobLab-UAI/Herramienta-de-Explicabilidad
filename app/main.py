@@ -442,8 +442,8 @@ def _build_narrative(result: dict, profile: str) -> str:
     method = result.get("method_used", "unknown")
     exps = result.get("explanations", {})
 
-    # 1. Extraemos el top_feat (Para SHAP y LIME)
-    top_feat = "desconocida"
+    # 1. Extraemos los top features (Para SHAP y LIME)
+    top_feats: list[str] = []
     if method in ("shap", "lime") and method in exps:
         feats = exps[method].get("features", [])
         if feats:
@@ -451,7 +451,15 @@ def _build_narrative(result: dict, profile: str) -> str:
                 sorted_f = sorted(feats, key=lambda f: abs(f.get("shap_value", 0)), reverse=True)
             else:
                 sorted_f = sorted(feats, key=lambda f: abs(f.get("lime_weight", 0)), reverse=True)
-            top_feat = sorted_f[0].get("name", "desconocida")
+            top_feats = [f.get("name", "desconocida") for f in sorted_f[:3] if f.get("name")]
+    top_feat = top_feats[0] if top_feats else "desconocida"
+
+    def _feats_text(feats: list[str]) -> str:
+        if not feats:
+            return "los factores analizados"
+        if len(feats) == 1:
+            return f"'{feats[0]}'"
+        return ", ".join(f"'{f}'" for f in feats[:-1]) + f" y '{feats[-1]}'"
 
     # 2. Extraemos las condiciones (Para ANCHOR)
     condiciones = "condiciones desconocidas"
@@ -466,14 +474,15 @@ def _build_narrative(result: dict, profile: str) -> str:
             return (
                 f"El modelo clasificó la instancia como '{label}' (clase {pred}) "
                 f"usando explicaciones basadas en reglas (Método: ANCHOR).\n\n"
-                f"Se encontró que las condiciones: [{condiciones}] son suficientes para anclar la predicción. "
+                f"Se encontró que las condiciones [{condiciones}] son suficientes para anclar la predicción. "
                 f"Revise la cobertura y precisión de esta regla en la pestaña de métricas."
             )
         else:
             return (
                 f"El modelo clasificó la instancia como '{label}' (clase {pred}) "
                 f"con una confianza del {conf:.2f}% (Método: {method.upper()}).\n\n"
-                f"El factor determinante fue '{top_feat}', con la mayor contribución marginal o peso local. "
+                f"Los factores con mayor contribución marginal fueron {_feats_text(top_feats)}. "
+                f"El primero presentó el peso local más alto; los siguientes refuerzan o contrarrestan la predicción. "
                 f"Se recomienda revisar las otras pestañas para confirmar la estabilidad de la explicación."
             )
 
@@ -482,31 +491,29 @@ def _build_narrative(result: dict, profile: str) -> str:
             return (
                 f"El análisis indica que este caso corresponde a '{label}'.\n\n"
                 f"El sistema encontró una regla estricta: si se cumple que [{condiciones}], "
-                f"el resultado siempre será este. Valide si esta combinación de reglas coincide con los protocolos de su área."
+                f"el resultado siempre será este. Valide si esta combinación de condiciones coincide con los protocolos de su área."
             )
         else:
             return (
                 f"El análisis indica que este caso corresponde a '{label}' "
                 f"(confianza: {conf:.2f}%).\n\n"
-                f"El factor más relevante en esta decisión fue '{top_feat}'. Desde la perspectiva del "
-                f"dominio, evalúe si el peso de esta variable tiene sentido lógico o profesional."
+                f"Los factores que más influyeron en esta decisión fueron {_feats_text(top_feats)}. "
+                f"Desde la perspectiva del dominio, evalúe si el peso de estas variables tiene sentido lógico o profesional."
             )
 
-    else: # Usuario sin contexto
+    else:  # Usuario sin contexto
         if method == "anchor":
             return (
-                f"¡Hola! El sistema analizó los datos y concluye que este caso "
-                f"corresponde a '{label}'.\n\n"
-                f"El sistema tomó esta decisión basándose en una regla clara. Como se cumplió que: {condiciones}, "
-                f"el modelo estuvo completamente seguro de su respuesta. Es como seguir una receta paso a paso."
+                f"El sistema analizó los datos y concluye que este caso corresponde a '{label}'.\n\n"
+                f"La decisión se basó en una regla clara: {condiciones}. "
+                f"Cuando se cumplen estas condiciones juntas, el sistema llega siempre al mismo resultado."
             )
         else:
             return (
-                f"¡Hola! El sistema analizó los datos y concluye que este caso "
-                f"corresponde a '{label}'.\n\n"
-                f"La característica que más influyó en este resultado fue '{top_feat}'. "
-                f"En términos sencillos: si el valor de '{top_feat}' fuera diferente, "
-                f"es muy probable que la decisión de la Inteligencia Artificial hubiera cambiado."
+                f"El sistema analizó los datos y concluye que este caso corresponde a '{label}'.\n\n"
+                f"Las características que más influyeron en este resultado fueron {_feats_text(top_feats)}. "
+                f"En términos sencillos: si cualquiera de estos valores fuera diferente, "
+                f"es probable que la decisión del sistema hubiera cambiado."
             )
 
 def _format_technical_for_frontend(result: dict) -> dict:
@@ -846,3 +853,111 @@ async def download_feedback(filename: str):
     if not path.exists():
         raise HTTPException(status_code=404, detail="Archivo no encontrado.")
     return FileResponse(path=str(path), media_type="application/pdf", filename=filename)
+
+
+# ─── Reporte de explicación ───────────────────────────────────────────────────
+
+PERFIL_LABELS = {
+    "data-scientist": "Especialista en IA / Data Scientist",
+    "domain-expert": "Experto en el Dominio",
+    "non-expert": "Usuario General",
+}
+
+
+class ExplanationReportRequest(BaseModel):
+    profile: str
+    explanation: str
+    chat_history: list[dict] = []
+    timestamp: str = ""
+    usuario: str = "Anónimo"
+
+
+def _build_explanation_pdf(data: ExplanationReportRequest, out_path: Path) -> None:
+    from fpdf import FPDF
+
+    s = _sanitize
+
+    class PDF(FPDF):
+        def header(self):
+            self.set_font("Helvetica", "B", 13)
+            self.cell(0, 8, "ProfileXAI - Reporte de Explicacion", align="C", new_x="LMARGIN", new_y="NEXT")
+            self.set_font("Helvetica", "", 9)
+            self.cell(0, 5, "Herramienta de Explicabilidad - Piloto SUSESO", align="C", new_x="LMARGIN", new_y="NEXT")
+            self.ln(3)
+            self.set_draw_color(180, 180, 180)
+            self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
+            self.ln(4)
+
+        def footer(self):
+            self.set_y(-14)
+            self.set_font("Helvetica", "I", 8)
+            self.set_text_color(130, 130, 130)
+            self.cell(0, 8, f"Pagina {self.page_no()} | Generado por ProfileXAI", align="C")
+
+        def section_title(self, title: str):
+            self.ln(3)
+            self.set_font("Helvetica", "B", 11)
+            self.set_fill_color(240, 245, 255)
+            self.set_text_color(30, 60, 120)
+            self.cell(0, 8, title, fill=True, new_x="LMARGIN", new_y="NEXT")
+            self.set_text_color(0, 0, 0)
+            self.ln(2)
+
+        def body_text(self, text: str):
+            self.set_font("Helvetica", "", 10)
+            self.multi_cell(0, 6, s(text))
+            self.ln(2)
+
+    pdf = PDF(orientation="P", unit="mm", format="A4")
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_margins(18, 18, 18)
+
+    # Metadatos
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(80, 80, 80)
+    ts = data.timestamp or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    pdf.cell(0, 5, s(f"Fecha y hora: {ts}"), new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, s(f"Usuario: {data.usuario}"), new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, s(f"Perfil: {PERFIL_LABELS.get(data.profile, data.profile)}"), new_x="LMARGIN", new_y="NEXT")
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(4)
+
+    # Explicación
+    pdf.section_title("Explicacion en Lenguaje Natural")
+    pdf.body_text(data.explanation)
+
+    # Historial del chat
+    if data.chat_history:
+        pdf.section_title("Conversacion con el Asistente RAG")
+        for msg in data.chat_history:
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            label = "Usuario" if role == "user" else "Asistente"
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.cell(0, 6, s(f"{label}:"), new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("Helvetica", "", 10)
+            pdf.multi_cell(0, 6, s(content))
+            pdf.ln(3)
+
+    pdf.output(str(out_path))
+
+
+@app.post("/api/report/explanation")
+async def generate_explanation_report(payload: ExplanationReportRequest):
+    """Genera y descarga un PDF con la explicación y el historial de chat."""
+    filename = f"reporte_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}.pdf"
+    tmp_path = Path("/tmp") / filename
+    try:
+        _build_explanation_pdf(payload, tmp_path)
+        content = tmp_path.read_bytes()
+        return StreamingResponse(
+            iter([content]),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except Exception as e:
+        logger.error("Error generando reporte de explicacion: %s", e)
+        raise HTTPException(status_code=500, detail="Error al generar el reporte.")
+    finally:
+        tmp_path.unlink(missing_ok=True)

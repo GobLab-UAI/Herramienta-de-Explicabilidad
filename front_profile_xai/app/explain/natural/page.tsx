@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/navbar"
 import { ChatPanel } from "@/components/chat-panel"
-import { generateExplanation, chatRag, type ChatMessage, type UserProfile } from "@/lib/mock-api"
-import { Loader2 } from "lucide-react"
+import { generateExplanation, chatRag, downloadExplanationReport, type ChatMessage, type UserProfile } from "@/lib/mock-api"
+import { Loader2, FileDown } from "lucide-react"
 
 export default function NaturalExplanationPage() {
   const router = useRouter()
@@ -20,6 +20,7 @@ export default function NaturalExplanationPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isChatLoading, setIsChatLoading] = useState(false)
+  const [isReportLoading, setIsReportLoading] = useState(false)
 
 useEffect(() => {
     const savedInstanceString = localStorage.getItem("currentInstance");
@@ -60,6 +61,22 @@ useEffect(() => {
 
     setMessages([...messages, userMessage, assistantMessage])
     setIsChatLoading(false)
+  }
+
+  const handleDownloadReport = async () => {
+    setIsReportLoading(true)
+    try {
+      await downloadExplanationReport({
+        profile: profile || "non-expert",
+        explanation,
+        chat_history: messages.map((m) => ({ role: m.role, content: m.content })),
+        timestamp: new Date().toLocaleString("es-CL"),
+      })
+    } catch (err) {
+      console.error("Error descargando reporte:", err)
+    } finally {
+      setIsReportLoading(false)
+    }
   }
 
   const profileLabel = profile === "domain-expert" ? "Experto en el Dominio" : "Usuario general"
@@ -107,9 +124,20 @@ useEffect(() => {
                     Cambiar valores de la instancia
                   </Button>
                   <Button
+                    variant="outline"
+                    disabled={isLoading || isReportLoading}
+                    onClick={handleDownloadReport}
+                  >
+                    {isReportLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <FileDown className="mr-2 h-4 w-4" />
+                    )}
+                    Generar reporte PDF
+                  </Button>
+                  <Button
                     className="ml-auto"
                     onClick={() => {
-                      // TODO: Backend: close job, clean session, optionally persist logs/telemetry
                       router.push("/")
                     }}
                   >

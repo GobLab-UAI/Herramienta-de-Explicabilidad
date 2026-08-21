@@ -1,6 +1,28 @@
 // const API_BASE_URL = "https://profile-xai-api.onrender.com/api";
 const API_BASE_URL = "http://127.0.0.1:8000/api"
 
+export async function downloadExplanationReport(payload: {
+  profile: string
+  explanation: string
+  chat_history: { role: string; content: string }[]
+  timestamp?: string
+  usuario?: string
+}): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/report/explanation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error("Error al generar el reporte")
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `reporte_profilexai_${Date.now()}.pdf`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export interface DatasetSchema { columns: Array<{ name: string; type: "categorical" | "numerical" | "text"; options?: string[] }>; }
 export interface InstanceData { [key: string]: string | number; }
 export type UserProfile = "data-scientist" | "domain-expert" | "non-expert";

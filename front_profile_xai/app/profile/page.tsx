@@ -10,30 +10,40 @@ import { Navbar } from "@/components/navbar"
 import { cn } from "@/lib/utils"
 import type { UserProfile } from "@/lib/mock-api"
 
+const ALL_PROFILES = [
+  {
+    id: "data-scientist" as UserProfile,
+    icon: Microscope,
+    title: "Especialista en IA",
+    description: "Detalles técnicos, métricas, salidas directas de los explicadores (SHAP, LIME, Anchor)",
+  },
+  {
+    id: "domain-expert" as UserProfile,
+    icon: Briefcase,
+    title: "Experto en el Dominio",
+    description: "Lenguaje natural con contexto especializado desde la base de conocimientos (RAG)",
+  },
+  {
+    id: "non-expert" as UserProfile,
+    icon: User,
+    title: "Usuario General",
+    description: "Lenguaje accesible, ejemplos claros, conclusiones simplificadas (RAG)",
+  },
+]
+
 export default function ProfilePage() {
   const router = useRouter()
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null)
 
-  const profiles = [
-    {
-      id: "data-scientist" as UserProfile,
-      icon: Microscope,
-      title: "Especialista en IA",
-      description: "Detalles técnicos, métricas, salidas directas de los explicadores (SHAP, LIME, Anchor)",
-    },
-    {
-      id: "domain-expert" as UserProfile,
-      icon: Briefcase,
-      title: "Experto en el Dominio",
-      description: "Lenguaje natural con contexto especializado desde la base de conocimientos (RAG)",
-    },
-    {
-      id: "non-expert" as UserProfile,
-      icon: User,
-      title: "Usuario General",
-      description: "Lenguaje accesible, ejemplos claros, conclusiones simplificadas (RAG)",
-    },
-  ]
+  const enabled: UserProfile[] = (() => {
+    try {
+      const stored = localStorage.getItem("enabledProfiles")
+      if (stored) return JSON.parse(stored) as UserProfile[]
+    } catch {}
+    return ["data-scientist", "domain-expert", "non-expert"]
+  })()
+
+  const profiles = ALL_PROFILES.filter((p) => enabled.includes(p.id))
 
   const handleGenerate = () => {
     // TODO: Backend: call /explain with profile + instance + jobId, return natural/raw/metrics
