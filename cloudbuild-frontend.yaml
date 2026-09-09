@@ -1,0 +1,36 @@
+steps:
+  - id: Build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --no-cache
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/explicabilidad-frontend:$BUILD_ID
+      - --build-arg
+      - NEXT_PUBLIC_API_URL=$_API_URL
+      - -f
+      - front_profile_xai/Dockerfile
+      - front_profile_xai
+  - id: Push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/explicabilidad-frontend:$BUILD_ID
+  - id: Deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - services
+      - update
+      - explicabilidad-frontend
+      - --platform=managed
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/explicabilidad-frontend:$BUILD_ID
+      - --region=us-central1
+      - --quiet
+images:
+  - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/explicabilidad-frontend:$BUILD_ID
+substitutions:
+  _API_URL: ""
+options:
+  logging: CLOUD_LOGGING_ONLY
