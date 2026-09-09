@@ -5,7 +5,9 @@ services:
   # ── Backend principal (API FastAPI) ─────────────────────────────────────────
   # NO tiene acceso al socket de Docker → C2 resuelto en local
   backend:
-    build: ./app
+    build:
+      context: .
+      dockerfile: app/Dockerfile
     ports:
       - "8000:8000"
     volumes:
