@@ -28,6 +28,7 @@ steps:
       - --memory=2Gi
       - --cpu=2
       - --timeout=300
+      - --min-instances=0
       - --set-env-vars=GCP_PROJECT_ID=$PROJECT_ID,GCP_LOCATION=us-central1,GEMINI_MODEL=gemini-2.5-flash,CONVERTER_BACKEND=cloudbuild,GCS_BUCKET=$PROJECT_ID-explicabilidad-xai,CORS_ORIGINS=https://explicabilidad-frontend-92911726008.us-central1.run.app
       - --set-secrets=API_KEY=explicabilidad-api-key:latest,GEMINI_API_KEY=explicabilidad-gemini-api-key:latest
       - --quiet

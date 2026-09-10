@@ -27,6 +27,7 @@ steps:
       - --platform=managed
       - --image=us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/explicabilidad-frontend:$BUILD_ID
       - --region=us-central1
+      - --min-instances=0
       - --quiet
 images:
   - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/explicabilidad-frontend:$BUILD_ID
