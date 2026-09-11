@@ -86,6 +86,9 @@ class _CloudBuildConverterBackend(ConverterBackend):
         )
 
     def _convert_sync(self, model_path: str, onnx_path: str, dataset_path: str) -> str:
+        import io
+        import tarfile
+
         from google.cloud import storage  # type: ignore
         from google.cloud.devtools import cloudbuild_v1  # type: ignore
 
@@ -98,6 +101,7 @@ class _CloudBuildConverterBackend(ConverterBackend):
         gcs_model = f"conversions/{job_id}/model{model_suffix}"
         gcs_dataset = f"conversions/{job_id}/dataset.csv"
         gcs_onnx = f"conversions/{job_id}/model_agnostico.onnx"
+        gcs_source = f"conversions/{job_id}/source.tar.gz"
 
         storage_client = storage.Client()
         bucket = storage_client.bucket(self._gcs_bucket)
@@ -106,6 +110,17 @@ class _CloudBuildConverterBackend(ConverterBackend):
         logger.info("CloudBuild: subiendo archivos a gs://%s ...", self._gcs_bucket)
         bucket.blob(gcs_model).upload_from_filename(model_path)
         bucket.blob(gcs_dataset).upload_from_filename(dataset_path)
+
+        # 1b. Empaquetar app/ (Dockerfile.sandbox + conver.py) como fuente del build.
+        # Cloud Build parte de un /workspace vacío: sin esto, el paso "docker build
+        # -f Dockerfile.sandbox ." no encontraría ni el Dockerfile ni conver.py.
+        app_dir = Path(__file__).resolve().parent
+        tar_buffer = io.BytesIO()
+        with tarfile.open(fileobj=tar_buffer, mode="w:gz") as tar:
+            tar.add(app_dir / "Dockerfile.sandbox", arcname="Dockerfile.sandbox")
+            tar.add(app_dir / "conver.py", arcname="conver.py")
+        tar_buffer.seek(0)
+        bucket.blob(gcs_source).upload_from_file(tar_buffer, content_type="application/gzip")
 
         # 2. Detectar versiones del modelo (mismo código que el orquestador local)
         info = detect_model_info(model_path)
@@ -127,6 +142,11 @@ class _CloudBuildConverterBackend(ConverterBackend):
         #   Paso C: gsutil cp del .onnx resultante a GCS
         build = cloudbuild_v1.Build(
             timeout={"seconds": 600},
+            source=cloudbuild_v1.Source(
+                storage_source=cloudbuild_v1.StorageSource(
+                    bucket=self._gcs_bucket, object_=gcs_source,
+                )
+            ),
             steps=[
                 # Descargar archivos desde GCS al workspace de Cloud Build
                 cloudbuild_v1.BuildStep(
@@ -150,7 +170,7 @@ class _CloudBuildConverterBackend(ConverterBackend):
                         "--build-arg", f"SKLEARN_VERSION={sklearn_version}",
                         "--build-arg", f"LGB_VERSION_SPEC={lgb_version_spec}",
                         "-t", image_name,
-                        "-f", "app/Dockerfile.sandbox",
+                        "-f", "Dockerfile.sandbox",
                         ".",
                     ],
                 ),
@@ -192,7 +212,7 @@ class _CloudBuildConverterBackend(ConverterBackend):
         bucket.blob(gcs_onnx).download_to_filename(onnx_path)
 
         # Limpiar archivos temporales de GCS
-        for blob_name in [gcs_model, gcs_dataset, gcs_onnx]:
+        for blob_name in [gcs_model, gcs_dataset, gcs_onnx, gcs_source]:
             try:
                 bucket.blob(blob_name).delete()
             except Exception:
