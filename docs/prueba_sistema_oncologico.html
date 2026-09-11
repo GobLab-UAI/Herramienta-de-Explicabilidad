@@ -1,0 +1,319 @@
+<title>Prueba de Sistema Oncológico</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#f5f6f4; --surface:#ffffff; --surface-2:#eceeea; --surface-3:#e2e6e1;
+    --ink:#16211d; --ink-soft:#4c5854; --ink-faint:#7c8783;
+    --line:#d9ddd8; --line-strong:#c2c8c1;
+    --accent:#1f6f64; --accent-ink:#ffffff; --accent-soft:#dcece7; --accent-soft-line:#bcd8d0;
+    --good:#2e7d4f; --good-soft:#e3f1e7;
+    --warn:#96650f; --warn-soft:#f6ecd9;
+    --danger:#a13a3a; --danger-soft:#f5e4e2;
+    --shadow: 0 1px 2px rgba(20,30,26,0.06), 0 8px 24px -12px rgba(20,30,26,0.18);
+    --radius-s: 6px; --radius-m: 10px; --radius-l: 16px;
+    --font-display: "Source Serif 4", Georgia, serif;
+    --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111613; --surface:#171d19; --surface-2:#1e2521; --surface-3:#262e29;
+      --ink:#eaeeec; --ink-soft:#aab5b0; --ink-faint:#7c8783;
+      --line:#2b332e; --line-strong:#3a433c;
+      --accent:#5cc2b3; --accent-ink:#0c1f1b; --accent-soft:#1c3630; --accent-soft-line:#2f5348;
+      --good:#6bc48c; --good-soft:#1c3324; --warn:#e0ac53; --warn-soft:#3a2f18;
+      --danger:#e08a8a; --danger-soft:#3a2323;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px -16px rgba(0,0,0,0.55);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111613; --surface:#171d19; --surface-2:#1e2521; --surface-3:#262e29;
+    --ink:#eaeeec; --ink-soft:#aab5b0; --ink-faint:#7c8783;
+    --line:#2b332e; --line-strong:#3a433c;
+    --accent:#5cc2b3; --accent-ink:#0c1f1b; --accent-soft:#1c3630; --accent-soft-line:#2f5348;
+    --good:#6bc48c; --good-soft:#1c3324; --warn:#e0ac53; --warn-soft:#3a2f18;
+    --danger:#e08a8a; --danger-soft:#3a2323;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px -16px rgba(0,0,0,0.55);
+  }
+  *{box-sizing:border-box;}
+  body{background:var(--bg); color:var(--ink); font-family:var(--font-body); font-size:16px; line-height:1.6;}
+  h1,h2,h3,h4{font-family:var(--font-display); font-weight:600; text-wrap:balance; color:var(--ink); margin:0 0 .5em;}
+  p{margin:0 0 1em; max-width:68ch;}
+  a{color:var(--accent);}
+  code,.mono{font-family:var(--font-mono);}
+
+  .shell{max-width:900px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{padding-bottom:32px; margin-bottom:40px; border-bottom:1px solid var(--line);}
+  .cover .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:.76rem; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); font-weight:600; margin-bottom:16px;}
+  .cover .eyebrow::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--accent);}
+  .cover h1{font-size:2.3rem; line-height:1.15; max-width:22ch;}
+  .cover .dek{font-size:1.05rem; color:var(--ink-soft); max-width:60ch; margin-top:12px;}
+  .cover .meta{display:flex; flex-wrap:wrap; gap:10px; margin-top:22px;}
+  .pill{display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px; border:1px solid var(--line-strong); font-size:.78rem; color:var(--ink-soft); background:var(--surface);}
+  .pill b{color:var(--ink); font-weight:600;}
+  .pill.good{border-color:color-mix(in srgb, var(--good) 40%, var(--line)); background:var(--good-soft); color:var(--good);}
+  .pill.good b{color:var(--good);}
+
+  .verdict{
+    display:flex; gap:18px; align-items:center; padding:20px 24px; border-radius:var(--radius-m);
+    background:var(--good-soft); border:1px solid color-mix(in srgb, var(--good) 35%, var(--line));
+    margin-bottom:40px;
+  }
+  .verdict .badge{
+    flex:none; width:52px; height:52px; border-radius:50%; background:var(--good); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:1.6rem; font-weight:700;
+  }
+  .verdict h2{margin:0 0 4px; font-size:1.25rem;}
+  .verdict p{margin:0; color:var(--ink-soft); font-size:.92rem;}
+
+  section{margin-bottom:52px; scroll-margin-top:24px;}
+  section > .tag{font-family:var(--font-mono); font-size:.76rem; color:var(--accent); letter-spacing:.04em; margin-bottom:8px; display:block;}
+  section h2{font-size:1.5rem; margin-bottom:.35em;}
+  section .lede{color:var(--ink-soft); font-size:1rem; margin-bottom:24px; max-width:64ch;}
+
+  .grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
+  .grid-2{display:grid; grid-template-columns:repeat(2,1fr); gap:14px;}
+  @media (max-width:760px){.grid-3,.grid-2{grid-template-columns:1fr;}}
+
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-m); padding:18px 20px;}
+  .card h3{font-size:.95rem; margin-bottom:6px; font-family:var(--font-body); font-weight:600;}
+  .card p{font-size:.88rem; color:var(--ink-soft); margin:0;}
+  .card .k{font-family:var(--font-mono); font-size:.72rem; color:var(--accent); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; display:block;}
+
+  table{border-collapse:collapse; width:100%; font-size:.87rem;}
+  th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top;}
+  thead th{font-family:var(--font-mono); font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-faint); font-weight:600; border-bottom:1px solid var(--line-strong);}
+  .table-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius-m); margin:16px 0;}
+  .table-scroll table{margin:0;}
+  .num-col{font-variant-numeric:tabular-nums; font-family:var(--font-mono); font-size:.82rem;}
+
+  .steps{display:flex; flex-direction:column;}
+  .step{display:grid; grid-template-columns:36px minmax(0,1fr); gap:16px; padding:16px 0; border-top:1px solid var(--line);}
+  .step:last-child{border-bottom:1px solid var(--line);}
+  .step .num{width:28px; height:28px; border-radius:50%; background:var(--accent); color:var(--accent-ink); font-family:var(--font-mono); font-weight:600; font-size:.82rem; display:flex; align-items:center; justify-content:center;}
+  .step h3{font-size:.98rem; margin-bottom:4px;}
+  .step p{font-size:.88rem; color:var(--ink-soft); margin:0;}
+  .step .status{display:inline-flex; align-items:center; gap:6px; font-size:.76rem; font-family:var(--font-mono); margin-top:8px; color:var(--good);}
+  .step .status::before{content:"✓"; font-weight:700;}
+
+  .mock-window{border:1px solid var(--line); border-radius:var(--radius-m); overflow:hidden; background:var(--surface); box-shadow:var(--shadow);}
+  .mock-bar{display:flex; align-items:center; gap:8px; padding:9px 14px; background:var(--surface-2); border-bottom:1px solid var(--line);}
+  .mock-bar .dot{width:9px; height:9px; border-radius:50%; background:var(--line-strong);}
+  .mock-bar .url{margin-left:8px; font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:3px 10px;}
+  .mock-body{padding:20px 22px;}
+  .repro-tag{font-size:.68rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); font-family:var(--font-mono);}
+
+  .narratives{display:flex; flex-direction:column; gap:12px; margin:16px 0;}
+  .narrative{border:1px solid var(--line); border-radius:var(--radius-m); background:var(--surface); padding:16px 18px;}
+  .narrative .who{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .narrative .who .name{font-size:.76rem; text-transform:uppercase; letter-spacing:.04em; color:var(--accent); font-family:var(--font-mono); font-weight:600;}
+  .narrative blockquote{margin:0; font-size:.92rem; color:var(--ink); line-height:1.6; border-left:3px solid var(--accent-soft-line); padding-left:12px;}
+
+  .chatlog{display:flex; flex-direction:column; gap:10px;}
+  .bubble{max-width:80%; padding:10px 14px; border-radius:12px; font-size:.9rem;}
+  .bubble.user{align-self:flex-end; background:var(--accent); color:var(--accent-ink); border-bottom-right-radius:2px;}
+  .bubble.bot{align-self:flex-start; background:var(--surface-2); border:1px solid var(--line); border-bottom-left-radius:2px;}
+
+  .finding{border:1px solid var(--line); border-radius:var(--radius-m); overflow:hidden; margin-bottom:16px;}
+  .finding-head{display:flex; align-items:center; gap:12px; padding:14px 18px; background:var(--danger-soft); border-bottom:1px solid color-mix(in srgb, var(--danger) 35%, var(--line));}
+  .finding-head .sev{font-family:var(--font-mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; padding:3px 8px; border-radius:5px; background:var(--danger); color:#fff; font-weight:600;}
+  .finding-head h3{margin:0; font-size:.98rem;}
+  .finding-body{padding:16px 18px; font-size:.9rem; color:var(--ink-soft);}
+  .finding-body p{margin-bottom:10px; font-size:.9rem;}
+  .finding-body .fix{display:flex; gap:10px; margin-top:8px; padding-top:10px; border-top:1px dashed var(--line);}
+  .finding-body .fix .lbl{font-family:var(--font-mono); font-size:.7rem; color:var(--good); text-transform:uppercase; letter-spacing:.04em; flex:none; padding-top:2px;}
+  .finding-body .fix p{margin:0; color:var(--ink);}
+
+  .log-line{font-family:var(--font-mono); font-size:.78rem; background:var(--surface-3); border-radius:6px; padding:8px 12px; margin:4px 0; overflow-x:auto; white-space:pre;}
+
+  footer{border-top:1px solid var(--line); padding-top:20px; margin-top:36px; font-size:.8rem; color:var(--ink-faint);}
+</style>
+
+<div class="shell">
+  <div class="cover">
+    <span class="eyebrow">Reporte de prueba de sistema</span>
+    <h1>Profile XAI end-to-end, caso oncológico demo</h1>
+    <p class="dek">Ejecución real contra el entorno de producción en Cloud Run — sin datos simulados. Subida de archivos vía navegador real, conversión de modelo vía Cloud Build real, explicación y chat contra Vertex AI RAG Engine real.</p>
+    <div class="meta">
+      <span class="pill">10-11 sept 2026</span>
+      <span class="pill">explicabilidad-frontend / explicabilidad-api · us-central1</span>
+      <span class="pill good"><b>3/3</b> perfiles verificados</span>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <div class="badge">✓</div>
+    <div>
+      <h2>Sistema aprobado — con 2 bugs críticos corregidos durante la prueba</h2>
+      <p>El flujo completo (subida → conversión → explicación → chat RAG) funciona de punta a punta en los 3 perfiles. La prueba encontró y corrigió dos fallas que habrían dejado la herramienta inutilizable o el RAG completamente inoperante en producción — ver sección 04.</p>
+    </div>
+  </div>
+
+  <section id="caso">
+    <span class="tag">01 — Caso de prueba</span>
+    <h2>Detección de tumor maligno/benigno (demo educativo)</h2>
+    <p class="lede">Caso sintético y ficticio, declarado explícitamente como no clínico por el propio archivo de contexto — ideal para probar el pipeline completo con un modelo y datos nuevos que la herramienta nunca había visto.</p>
+    <div class="grid-3">
+      <div class="card">
+        <span class="k">Modelo</span>
+        <h3>CANCER_DEMO_pipeline.pkl</h3>
+        <p>sklearn Pipeline: TargetEncoder (variable categórica) + LGBMClassifier. AUC test declarado: 0.81.</p>
+      </div>
+      <div class="card">
+        <span class="k">Dataset</span>
+        <h3>dataset_explicabilidad.csv</h3>
+        <p>600 filas · 6 variables: consistencia, edad, tamano_tumor_cm, tasa_crecimiento_cm_mes, antecedentes_familiares, bordes_irregulares.</p>
+      </div>
+      <div class="card">
+        <span class="k">Base de conocimiento</span>
+        <h3>contexto_modelo.txt</h3>
+        <p>Documento de referencia con la descripción del problema, variables y métricas — nunca antes indexado por la herramienta.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="flujo">
+    <span class="tag">02 — Flujo ejecutado</span>
+    <h2>Paso a paso, con verificación real en cada etapa</h2>
+    <p class="lede">Cada paso se ejecutó en un navegador real contra <span class="mono">explicabilidad-frontend</span>, y se verificó contra los logs de Cloud Run / Cloud Build del proyecto — no se simuló ninguna respuesta.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <div>
+          <h3>Acceso como invitado + 3 perfiles habilitados</h3>
+          <p>Login guest, los 3 perfiles (Especialista en IA, Experto en el Dominio, Usuario General) quedan habilitados por defecto.</p>
+          <span class="status">Verificado en pantalla</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <div>
+          <h3>Subida de los 3 archivos reales</h3>
+          <p>contexto_modelo.txt, CANCER_DEMO_pipeline.pkl y dataset_explicabilidad.csv subidos vía input de archivo real (no simulado). Progreso: 3/3 listos.</p>
+          <span class="status">Confirmado en logs: 200 OK en /upload/knowledge-base, /upload/dataset, /upload/model</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <div>
+          <h3>Conversión del modelo (.pkl → .onnx)</h3>
+          <p>Disparó un job real de Cloud Build que construyó el sandbox de conversión y detectó el framework sklearn+LGBM automáticamente.</p>
+          <span class="status">Cloud Build job SUCCESS · 2 clases detectadas: [0, 1]</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">4</div>
+        <div>
+          <h3>Etiquetado: 0 → Benigno, 1 → Maligno</h3>
+          <p>Nombres asignados manualmente según el contexto del modelo.</p>
+          <span class="status">Guardado correctamente</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">5</div>
+        <div>
+          <h3>Instancia aleatoria del dataset real</h3>
+          <p>consistencia=Firme, edad=87, tamano_tumor_cm=0.42cm, antecedentes_familiares=0, bordes_irregulares=0.</p>
+          <span class="status">Poblado desde /dataset/random-instance</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">6</div>
+        <div>
+          <h3>Explicación generada en los 3 perfiles</h3>
+          <p>Misma instancia, mismo cálculo SHAP/LIME de base — 3 narrativas distintas generadas por Gemini vía Vertex AI. Ver sección 03.</p>
+          <span class="status">200 OK en /api/explain × 3</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">7</div>
+        <div>
+          <h3>Chat RAG: pregunta que solo la base de conocimiento puede responder</h3>
+          <p>Ver sección 05 — resultado real, con logs de retrieval de Vertex AI RAG Engine.</p>
+          <span class="status">"Recuperados 3 chunks para query" en logs de app.rag</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="perfiles">
+    <span class="tag">03 — Resultado por perfil</span>
+    <h2>Mismo caso, mismo cálculo, tres lecturas reales</h2>
+    <p class="lede">Instancia: tumor de 0.42cm, consistencia firme, paciente de 87 años, sin antecedentes familiares ni bordes irregulares. Predicción del modelo: <b>Maligno</b>, confianza 57.75% — un caso límite genuino (edad alta empuja a maligno; tamaño pequeño y bordes regulares empujan a benigno).</p>
+
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Variable</th><th>Valor</th><th>Peso LIME</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">tamano_tumor_cm</td><td>0.42 cm</td><td class="num-col">0.172</td></tr>
+          <tr><td class="mono">tasa_crecimiento_cm_mes</td><td>—</td><td class="num-col">0.110</td></tr>
+          <tr><td class="mono">edad</td><td>87</td><td class="num-col">0.077</td></tr>
+          <tr><td class="mono">consistencia</td><td>Firme</td><td class="num-col">−0.038</td></tr>
+          <tr><td class="mono">bordes_irregulares</td><td>0</td><td class="num-col">0.002</td></tr>
+          <tr><td class="mono">antecedentes_familiares</td><td>0</td><td class="num-col">0.001</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="narratives">
+      <div class="narrative">
+        <div class="who"><span class="name">Especialista en IA</span></div>
+        <blockquote>Confianza: <b>57.75%</b>. Panel técnico con pestañas SHAP / LIME / Anchors y pesos de variable exactos (tabla arriba) — sin narrativa en prosa, datos directos de los explicadores.</blockquote>
+      </div>
+      <div class="narrative">
+        <div class="who"><span class="name">Experto en el Dominio</span></div>
+        <blockquote>"El sistema ha clasificado este caso como <b>Maligno</b> con una probabilidad del 57.75%. Esta decisión se basa principalmente en la <b>edad avanzada del paciente (87 años)</b>, que fue el factor que más contribuyó a esta clasificación. Sin embargo, el <b>tamaño relativamente pequeño del tumor (0.42 cm)</b> y la <b>ausencia de bordes irregulares</b> fueron los factores que más fuertemente sugirieron un carácter benigno, contrarrestando significativamente la predicción de malignidad. La <b>consistencia firme</b> del tumor, en lugar de dura, también disminuyó la probabilidad de malignidad."</blockquote>
+      </div>
+      <div class="narrative">
+        <div class="who"><span class="name">Usuario General</span></div>
+        <blockquote>"Hola, ¡no te preocupes! Aquí te explico lo que el sistema ha calculado de forma sencilla. El sistema predice que el tumor es <b>Maligno</b> con un 57.75% de probabilidad. La razón principal de esta predicción es la <b>edad del paciente (87 años)</b> [...] Sin embargo, el <b>tamaño del tumor es bastante pequeño (0.42 cm)</b> y su consistencia es <b>Firme</b>, características que suelen asociarse a casos menos preocupantes y que hicieron que el sistema no estuviera tan seguro de su predicción."</blockquote>
+      </div>
+    </div>
+  </section>
+
+  <section id="rag">
+    <span class="tag">04 — Verificación del RAG</span>
+    <h2>¿El chat realmente usa la base de conocimiento?</h2>
+    <p class="lede">Prueba de fuego: preguntar un dato que <b>solo existe en el documento subido</b> (el AUC del modelo, 0.81) — no está en el dataset, ni en la explicación SHAP, ni es algo que un LLM pueda adivinar.</p>
+    <div class="mock-window">
+      <div class="mock-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="url">RAG Chat Assistant · perfil: experto en el dominio</span></div>
+      <div class="mock-body">
+        <div class="chatlog">
+          <div class="bubble user">¿Qué AUC obtuvo este modelo en el conjunto de test?</div>
+          <div class="bubble bot">El modelo alcanzó un AUC de 0.81 en el conjunto de test.</div>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:14px;">Respuesta correcta, verbatim contra <span class="mono">contexto_modelo.txt</span> ("AUC en conjunto de test: 0.81"). Confirmado con el log del servidor en el momento exacto de la consulta:</p>
+    <div class="log-line">INFO:app.rag:Recuperados 3 chunks para query</div>
+    <p>Este log solo aparece cuando Vertex AI RAG Engine ejecuta una búsqueda vectorial real sobre el corpus indexado — no es una respuesta genérica del modelo de lenguaje.</p>
+  </section>
+
+  <section id="hallazgos">
+    <span class="tag">05 — Hallazgos críticos corregidos durante esta prueba</span>
+    <h2>Lo que esta prueba encontró antes de que lo encontrara un usuario real</h2>
+
+    <div class="finding">
+      <div class="finding-head"><span class="sev">Crítico</span><h3>El frontend nunca enviaba la API key al backend</h3></div>
+      <div class="finding-body">
+        <p>Desde que se activó autenticación por API key en el backend (sesión anterior), <span class="mono">mock-api.ts</span> nunca agregó el header <span class="mono">X-API-Key</span> a ninguna llamada. Resultado: cada acción de un usuario real —subir un archivo, generar una explicación, chatear— habría fallado con <span class="mono">401</span>. La app estaba, en los hechos, completamente inutilizable en producción.</p>
+        <div class="fix"><span class="lbl">Fix</span><p>Header centralizado en un helper <span class="mono">authHeaders()</span> aplicado a los 11 fetch de la librería; la key se inyecta en build-time desde Secret Manager (mismo secreto que ya usa el backend), vía Cloud Build <span class="mono">availableSecrets</span>.</p></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-head"><span class="sev">Crítico</span><h3>Vertex AI RAG Engine no podía crear el corpus en us-central1</h3></div>
+      <div class="finding-body">
+        <p>La creación del corpus fallaba silenciosamente en <b>cada intento, desde el primer despliegue</b> — el error quedaba atrapado por un <span class="mono">except</span> que solo escribía un <span class="mono">logger.warning</span>, nunca visible en la UI. El chat y las narrativas funcionaban igual, pero sin ningún contexto real de la base de conocimiento: respuestas plausibles pero no fundamentadas.</p>
+        <div class="log-line">WARNING:app.main:RAG no pudo inicializarse: ('Failed in RagCorpus creation due to: ',
+InvalidArgument('For new projects, using Spanner mode with RAG Engine in us-central1,
+us-east1, and us-east4 is restricted to only allowlisted projects...'))</div>
+        <div class="fix"><span class="lbl">Fix</span><p><span class="mono">GCP_LOCATION</span> (variable independiente de la región de Cloud Run) cambiada a <span class="mono">us-west1</span>, donde la creación de corpus sí está permitida — verificado con una llamada real antes de aplicar el cambio en producción.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    GobLab UAI — Herramienta de Explicabilidad · Prueba ejecutada contra explicabilidad-api-92911726008.us-central1.run.app · Corpus RAG: profilexai_kb (us-west1)
+  </footer>
+</div>
