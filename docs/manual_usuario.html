@@ -1,0 +1,622 @@
+<title>Manual Profile XAI</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#f5f6f4;
+    --surface:#ffffff;
+    --surface-2:#eceeea;
+    --surface-3:#e2e6e1;
+    --ink:#16211d;
+    --ink-soft:#4c5854;
+    --ink-faint:#7c8783;
+    --line:#d9ddd8;
+    --line-strong:#c2c8c1;
+    --accent:#1f6f64;
+    --accent-ink:#ffffff;
+    --accent-soft:#dcece7;
+    --accent-soft-line:#bcd8d0;
+    --good:#2e7d4f;
+    --good-soft:#e3f1e7;
+    --warn:#96650f;
+    --warn-soft:#f6ecd9;
+    --danger:#a13a3a;
+    --danger-soft:#f5e4e2;
+    --shadow: 0 1px 2px rgba(20,30,26,0.06), 0 8px 24px -12px rgba(20,30,26,0.18);
+    --radius-s: 6px;
+    --radius-m: 10px;
+    --radius-l: 16px;
+    --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111613;
+      --surface:#171d19;
+      --surface-2:#1e2521;
+      --surface-3:#262e29;
+      --ink:#eaeeec;
+      --ink-soft:#aab5b0;
+      --ink-faint:#7c8783;
+      --line:#2b332e;
+      --line-strong:#3a433c;
+      --accent:#5cc2b3;
+      --accent-ink:#0c1f1b;
+      --accent-soft:#1c3630;
+      --accent-soft-line:#2f5348;
+      --good:#6bc48c;
+      --good-soft:#1c3324;
+      --warn:#e0ac53;
+      --warn-soft:#3a2f18;
+      --danger:#e08a8a;
+      --danger-soft:#3a2323;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px -16px rgba(0,0,0,0.55);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111613;
+    --surface:#171d19;
+    --surface-2:#1e2521;
+    --surface-3:#262e29;
+    --ink:#eaeeec;
+    --ink-soft:#aab5b0;
+    --ink-faint:#7c8783;
+    --line:#2b332e;
+    --line-strong:#3a433c;
+    --accent:#5cc2b3;
+    --accent-ink:#0c1f1b;
+    --accent-soft:#1c3630;
+    --accent-soft-line:#2f5348;
+    --good:#6bc48c;
+    --good-soft:#1c3324;
+    --warn:#e0ac53;
+    --warn-soft:#3a2f18;
+    --danger:#e08a8a;
+    --danger-soft:#3a2323;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px -16px rgba(0,0,0,0.55);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16px;
+    line-height:1.6;
+  }
+  h1,h2,h3,h4{
+    font-family:var(--font-display);
+    font-weight:600;
+    text-wrap:balance;
+    color:var(--ink);
+    margin:0 0 .5em;
+  }
+  p{margin:0 0 1em; max-width:66ch;}
+  a{color:var(--accent);}
+  code, .mono{font-family:var(--font-mono);}
+  ::selection{background:var(--accent-soft);}
+
+  .shell{
+    display:grid;
+    grid-template-columns: 260px minmax(0,1fr);
+    max-width:1280px;
+    margin:0 auto;
+  }
+  .toc{
+    position:sticky; top:0;
+    align-self:start;
+    height:100vh;
+    overflow-y:auto;
+    padding:36px 20px 36px 28px;
+    border-right:1px solid var(--line);
+  }
+  .toc-brand{
+    display:flex; align-items:baseline; gap:8px;
+    margin-bottom:6px;
+  }
+  .toc-brand .mark{
+    font-family:var(--font-display); font-weight:700; font-size:1.05rem;
+    color:var(--accent);
+  }
+  .toc-brand .rest{font-size:.95rem; color:var(--ink-soft);}
+  .toc-sub{
+    font-size:.78rem; color:var(--ink-faint); margin-bottom:28px;
+    letter-spacing:.02em;
+  }
+  .toc nav{display:flex; flex-direction:column; gap:2px;}
+  .toc nav a{
+    display:flex; gap:10px; align-items:baseline;
+    text-decoration:none; color:var(--ink-soft);
+    font-size:.88rem; padding:6px 8px; border-radius:var(--radius-s);
+  }
+  .toc nav a:hover{background:var(--surface-2); color:var(--ink);}
+  .toc nav a .n{
+    font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint);
+    width:1.4em; flex:none;
+  }
+  .toc-foot{
+    margin-top:28px; padding-top:16px; border-top:1px solid var(--line);
+    font-size:.76rem; color:var(--ink-faint); display:flex; flex-direction:column; gap:6px;
+  }
+  .toc-foot a{color:var(--ink-soft); word-break:break-all;}
+
+  main{padding:48px 56px 120px; min-width:0;}
+  .cover{
+    padding-bottom:40px; margin-bottom:48px; border-bottom:1px solid var(--line);
+  }
+  .cover .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:.76rem; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--accent); font-weight:600; margin-bottom:18px;
+  }
+  .cover .eyebrow::before{
+    content:""; width:7px; height:7px; border-radius:50%; background:var(--accent);
+  }
+  .cover h1{font-size:2.6rem; line-height:1.1; max-width:16ch;}
+  .cover .dek{font-size:1.1rem; color:var(--ink-soft); max-width:52ch; margin-top:14px;}
+  .cover .meta{
+    display:flex; flex-wrap:wrap; gap:10px; margin-top:26px;
+  }
+  .pill{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:5px 12px; border-radius:999px; border:1px solid var(--line-strong);
+    font-size:.78rem; color:var(--ink-soft); background:var(--surface);
+  }
+  .pill b{color:var(--ink); font-weight:600;}
+  .pill.accent{border-color:var(--accent-soft-line); background:var(--accent-soft); color:var(--accent);}
+  .pill.accent b{color:var(--accent);}
+
+  section{margin-bottom:64px; scroll-margin-top:24px;}
+  section > .tag{
+    font-family:var(--font-mono); font-size:.76rem; color:var(--accent);
+    letter-spacing:.04em; margin-bottom:8px; display:block;
+  }
+  section h2{font-size:1.7rem; margin-bottom:.35em;}
+  section .lede{color:var(--ink-soft); font-size:1.02rem; margin-bottom:28px; max-width:62ch;}
+
+  .grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid-2{display:grid; grid-template-columns:repeat(2,1fr); gap:16px;}
+  @media (max-width:900px){.grid-3,.grid-2{grid-template-columns:1fr;}}
+
+  .card{
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius-m); padding:20px;
+  }
+  .card h3{font-size:1rem; margin-bottom:8px; font-family:var(--font-body); font-weight:600;}
+  .card p{font-size:.92rem; color:var(--ink-soft); margin:0;}
+  .card .k{
+    font-family:var(--font-mono); font-size:.74rem; color:var(--accent);
+    text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px; display:block;
+  }
+
+  .callout{
+    display:flex; gap:14px; padding:16px 18px; border-radius:var(--radius-m);
+    border:1px solid var(--accent-soft-line); background:var(--accent-soft);
+    margin:20px 0; max-width:72ch;
+  }
+  .callout.warn{border-color:color-mix(in srgb, var(--warn) 40%, var(--line)); background:var(--warn-soft);}
+  .callout.danger{border-color:color-mix(in srgb, var(--danger) 40%, var(--line)); background:var(--danger-soft);}
+  .callout .ico{font-family:var(--font-mono); font-weight:600; color:var(--accent); flex:none;}
+  .callout.warn .ico{color:var(--warn);}
+  .callout.danger .ico{color:var(--danger);}
+  .callout p{margin:0; font-size:.92rem; color:var(--ink);}
+  .callout p + p{margin-top:8px;}
+
+  .steps{counter-reset:step; display:flex; flex-direction:column; gap:0;}
+  .step{
+    display:grid; grid-template-columns:44px minmax(0,1fr); gap:20px;
+    padding:22px 0; border-top:1px solid var(--line);
+  }
+  .step:last-child{border-bottom:1px solid var(--line);}
+  .step .num{
+    counter-increment:step;
+    font-family:var(--font-display); font-weight:600; font-size:1.3rem;
+    color:var(--accent-ink); background:var(--accent);
+    width:36px; height:36px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .step .num::before{content: counter(step);}
+  .step h3{font-size:1.08rem; margin-bottom:6px;}
+  .step p{color:var(--ink-soft); font-size:.94rem; margin-bottom:10px;}
+  .step .ui{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-m);
+    padding:14px 16px; font-size:.86rem; margin-top:10px;
+  }
+
+  .mock-window{
+    border:1px solid var(--line); border-radius:var(--radius-m); overflow:hidden;
+    background:var(--surface); box-shadow:var(--shadow);
+  }
+  .mock-bar{
+    display:flex; align-items:center; gap:8px; padding:9px 14px;
+    background:var(--surface-2); border-bottom:1px solid var(--line);
+  }
+  .mock-bar .dot{width:9px; height:9px; border-radius:50%; background:var(--line-strong);}
+  .mock-bar .url{
+    margin-left:8px; font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint);
+    background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:3px 10px;
+  }
+  .mock-body{padding:22px 24px;}
+
+  .profile-cards{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:14px 0 4px;}
+  @media (max-width:900px){.profile-cards{grid-template-columns:1fr;}}
+  .profile-card{
+    border:1px solid var(--line); border-radius:var(--radius-m); padding:16px;
+    background:var(--surface);
+  }
+  .profile-card .glyph{
+    width:34px; height:34px; border-radius:8px; background:var(--accent-soft);
+    color:var(--accent); display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-weight:600; margin-bottom:10px; font-size:.85rem;
+  }
+  .profile-card h4{font-size:.95rem; margin-bottom:4px;}
+  .profile-card p{font-size:.85rem; color:var(--ink-soft); margin:0;}
+
+  .kb{
+    display:flex; flex-direction:column; gap:10px; margin:16px 0;
+  }
+  .kb-row{
+    display:grid; grid-template-columns:200px 1fr; gap:16px;
+    padding:12px 0; border-top:1px solid var(--line);
+    font-size:.9rem;
+  }
+  .kb-row:last-child{border-bottom:1px solid var(--line);}
+  .kb-row .k{color:var(--ink-faint); font-family:var(--font-mono); font-size:.78rem;}
+
+  table{border-collapse:collapse; width:100%; font-size:.88rem;}
+  th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--line); vertical-align:top;}
+  thead th{
+    font-family:var(--font-mono); font-size:.72rem; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--ink-faint); font-weight:600; border-bottom:1px solid var(--line-strong);
+  }
+  .table-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius-m); margin:18px 0;}
+  .table-scroll table{margin:0;}
+  .table-scroll .card-inner{padding:0;}
+  .num-col{font-variant-numeric:tabular-nums; font-family:var(--font-mono); font-size:.84rem;}
+  .bar-cell{display:flex; align-items:center; gap:8px;}
+  .bar-track{width:90px; height:6px; border-radius:3px; background:var(--surface-3); overflow:hidden; flex:none;}
+  .bar-fill{height:100%; border-radius:3px;}
+  .bar-fill.pos{background:var(--danger);}
+  .bar-fill.neg{background:var(--accent);}
+
+  .narratives{display:flex; flex-direction:column; gap:14px; margin:18px 0;}
+  .narrative{
+    border:1px solid var(--line); border-radius:var(--radius-m); background:var(--surface);
+    padding:18px 20px;
+  }
+  .narrative .who{
+    display:flex; align-items:center; gap:8px; margin-bottom:10px;
+    font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; color:var(--accent);
+    font-family:var(--font-mono); font-weight:600;
+  }
+  .narrative blockquote{
+    margin:0; font-size:.94rem; color:var(--ink); line-height:1.65;
+    border-left:3px solid var(--accent-soft-line); padding-left:14px;
+  }
+
+  .faq{border-top:1px solid var(--line);}
+  .faq-item{border-bottom:1px solid var(--line); padding:18px 0;}
+  .faq-item h4{font-size:.98rem; margin-bottom:6px; display:flex; gap:10px;}
+  .faq-item h4::before{content:"?"; font-family:var(--font-mono); color:var(--accent); font-weight:700;}
+  .faq-item p{font-size:.9rem; color:var(--ink-soft); margin:0;}
+
+  .endpoint{
+    display:grid; grid-template-columns:64px 1fr; gap:12px; align-items:baseline;
+    padding:10px 0; border-top:1px solid var(--line); font-size:.86rem;
+  }
+  .endpoint:last-child{border-bottom:1px solid var(--line);}
+  .verb{font-family:var(--font-mono); font-weight:600; font-size:.74rem; color:var(--accent);}
+  .path{font-family:var(--font-mono); font-size:.84rem;}
+  .desc{color:var(--ink-soft); font-size:.82rem; display:block; margin-top:2px;}
+
+  footer{
+    border-top:1px solid var(--line); padding-top:24px; margin-top:40px;
+    font-size:.8rem; color:var(--ink-faint);
+  }
+
+  @media (max-width:860px){
+    .shell{grid-template-columns:1fr;}
+    .toc{position:relative; height:auto; border-right:none; border-bottom:1px solid var(--line);}
+    main{padding:32px 22px 90px;}
+    .cover h1{font-size:2rem;}
+  }
+
+  @media (prefers-reduced-motion:no-preference){
+    .fade-in{animation:fadeIn .5s ease-out both;}
+    @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+  }
+</style>
+
+<div class="shell">
+  <aside class="toc">
+    <div class="toc-brand"><span class="mark">Profile</span><span class="rest">XAI</span></div>
+    <div class="toc-sub">Manual de usuario · v1.0</div>
+    <nav>
+      <a href="#resumen"><span class="n">00</span>Resumen</a>
+      <a href="#requisitos"><span class="n">01</span>Requisitos</a>
+      <a href="#caso"><span class="n">02</span>Caso de estudio</a>
+      <a href="#flujo"><span class="n">03</span>Flujo de uso</a>
+      <a href="#lectura"><span class="n">04</span>Cómo leer la explicación</a>
+      <a href="#perfiles"><span class="n">05</span>Un caso, tres perfiles</a>
+      <a href="#chat"><span class="n">06</span>Chat con la base de conocimiento</a>
+      <a href="#faq"><span class="n">07</span>Preguntas frecuentes</a>
+      <a href="#referencia"><span class="n">08</span>Referencia técnica</a>
+    </nav>
+    <div class="toc-foot">
+      <span>GobLab UAI</span>
+      <a href="https://explicabilidad-frontend-92911726008.us-central1.run.app">Abrir Profile XAI →</a>
+    </div>
+  </aside>
+
+  <main>
+    <div class="cover fade-in">
+      <span class="eyebrow">Manual de usuario</span>
+      <h1>Explicaciones de IA que se adaptan a quien las lee</h1>
+      <p class="dek">Profile XAI genera explicaciones interpretables para modelos de clasificación de caja negra, y las redacta en tres registros distintos según quién las necesite: quien construyó el modelo, quien conoce el dominio, o quien solo quiere entender la decisión.</p>
+      <div class="meta">
+        <span class="pill accent"><b>SHAP</b>·<b>LIME</b>·<b>Anchor</b></span>
+        <span class="pill">Vertex AI RAG Engine + Gemini 2.5</span>
+        <span class="pill">Cloud Run · us-central1</span>
+      </div>
+    </div>
+
+    <section id="resumen">
+      <span class="tag">00 — Resumen</span>
+      <h2>¿Qué hace la herramienta?</h2>
+      <p class="lede">Sube un modelo entrenado, el dataset con el que fue entrenado, y documentación de referencia. Profile XAI convierte el modelo a un formato agnóstico, calcula por qué tomó una decisión puntual con tres métodos de explicabilidad distintos, y redacta esa razón en lenguaje natural — ajustado al perfil de quien pregunta y respaldado por la base de conocimiento que subiste.</p>
+      <div class="grid-3">
+        <div class="card">
+          <span class="k">Motor XAI</span>
+          <h3>Interpretabilidad agnóstica</h3>
+          <p>SHAP, LIME y Anchor calculados sobre el mismo modelo convertido a ONNX, sin importar si el original era scikit-learn o LightGBM.</p>
+        </div>
+        <div class="card">
+          <span class="k">Narrativa</span>
+          <h3>Perfil adaptativo</h3>
+          <p>La misma predicción se redacta distinto para un data scientist, un experto de dominio o alguien sin formación técnica.</p>
+        </div>
+        <div class="card">
+          <span class="k">Contexto</span>
+          <h3>Chat con RAG</h3>
+          <p>Preguntas de seguimiento respondidas con Vertex AI RAG Engine sobre la documentación que subiste, no solo con el modelo.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="requisitos">
+      <span class="tag">01 — Requisitos</span>
+      <h2>Antes de empezar</h2>
+      <p class="lede">Cada sesión de análisis necesita tres archivos. La herramienta los valida y, si el modelo es un pickle, lo escanea en busca de código malicioso antes de aceptarlo.</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Archivo</th><th>Formatos aceptados</th><th>Notas</th></tr></thead>
+          <tbody>
+            <tr><td>Base de conocimiento</td><td class="mono">.pdf .docx .jpg .jpeg .png .txt</td><td>Se indexa en Vertex AI RAG Engine para el chat y las narrativas.</td></tr>
+            <tr><td>Modelo entrenado</td><td class="mono">.pkl .joblib .h5</td><td>Pipelines de scikit-learn puros, LightGBM puro, o sklearn+LGBM mixto. Pasa por un escaneo de seguridad antes de convertirse.</td></tr>
+            <tr><td>Dataset de referencia</td><td class="mono">.xlsx .csv</td><td>Mismas columnas usadas para entrenar; se usa como fondo estadístico para SHAP/LIME.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <span class="ico">i</span>
+        <p>La primera conversión de un modelo con una combinación nueva de versiones (scikit-learn / LightGBM) construye una imagen de conversión desde cero y puede tomar 3–5 minutos. Las siguientes conversiones con esa misma combinación reutilizan la imagen y toman segundos.</p>
+      </div>
+    </section>
+
+    <section id="caso">
+      <span class="tag">02 — Caso de estudio</span>
+      <h2>Dictámenes de licencias médicas, SUSESO</h2>
+      <p class="lede">Este manual usa un caso real de referencia para mostrar la herramienta en acción: el modelo predictivo desarrollado para la Superintendencia de Seguridad Social de Chile (licitación 1607-28-LE23).</p>
+      <div class="mock-window" style="margin-bottom:24px;">
+        <div class="mock-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="url">base_de_conocimiento — dictamenes_suseso.txt</span></div>
+        <div class="mock-body">
+          <p style="margin-bottom:14px;">La SUSESO resuelve reclamaciones de trabajadores cuya licencia médica fue rechazada por una Isapre o el COMPIN. Recibe ~150.000 reclamaciones al año, creciendo 10% anual, con 40 días promedio de resolución. El modelo predice si el dictamen final será <b>ACOGIDA</b> (se revierte el rechazo) o <b>NO ACOGIDA</b> (se mantiene), a partir de los datos disponibles al momento del ingreso — antes de que un equipo médico revise el caso.</p>
+          <div class="kb">
+            <div class="kb-row"><span class="k">algoritmo</span><span>LightGBM sobre un pipeline scikit-learn (codificación de variables + boosting)</span></div>
+            <div class="kb-row"><span class="k">variables</span><span class="mono" style="font-size:.82rem;">patologia · cod_diagnostico · especialidades_medico · departamento_cierre · cant_instrumentos · TotalLicReclamadas_U365D · ratioDictamenNoAcoge_U90D/U365D …</span></div>
+            <div class="kb-row"><span class="k">clases</span><span><span class="mono">0</span> → NO ACOGIDA (rechazo mantenido) · <span class="mono">1</span> → ACOGIDA (rechazo revertido)</span></div>
+          </div>
+        </div>
+      </div>
+      <p>Usaremos este modelo para recorrer el flujo completo: subir los tres archivos, convertir el modelo, generar una explicación y conversar con la base de conocimiento.</p>
+    </section>
+
+    <section id="flujo">
+      <span class="tag">03 — Flujo de uso</span>
+      <h2>De la subida de archivos a la explicación</h2>
+      <p class="lede">Ocho pasos, en orden. Cada uno depende del anterior — la herramienta no deja avanzar si falta un archivo o una conversión.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Ingresa a la herramienta</h3>
+            <p>Inicia sesión con Google o continúa como invitado — la autenticación real aún no es obligatoria.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Elige los perfiles disponibles para esta sesión</h3>
+            <p>Puedes habilitar uno o los tres; se puede cambiar más adelante desde la vista de explicación.</p>
+            <div class="profile-cards">
+              <div class="profile-card"><div class="glyph">DS</div><h4>Especialista en IA</h4><p>Detalles técnicos, métricas y salidas directas de los explicadores.</p></div>
+              <div class="profile-card"><div class="glyph">DE</div><h4>Experto en el Dominio</h4><p>Lenguaje natural con contexto especializado desde la base de conocimiento.</p></div>
+              <div class="profile-card"><div class="glyph">UG</div><h4>Usuario General</h4><p>Lenguaje accesible, ejemplos claros y conclusiones simplificadas.</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Sube los tres archivos</h3>
+            <p>Base de conocimiento, modelo y dataset de referencia. La barra de progreso marca 3/3 listos cuando puedes continuar.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Convierte el modelo</h3>
+            <p>La herramienta detecta el framework (sklearn, LightGBM o mixto) y lo convierte a ONNX en un entorno aislado. Al terminar, muestra las clases que el modelo puede predecir.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Nombra esas clases</h3>
+            <p>El modelo devuelve etiquetas como <span class="mono">0</span> / <span class="mono">1</span>; aquí les das el nombre real — p. ej. <span class="mono">"NO ACOGIDA (rechazo mantenido)"</span>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Completa o sortea una instancia</h3>
+            <p>Llena el formulario a mano, o pide un caso aleatorio del dataset de referencia para probar rápido.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Lee la explicación</h3>
+            <p>Predicción, confianza, y una narrativa redactada para el perfil activo — con el detalle técnico disponible en pestañas aparte.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Pregunta al chat</h3>
+            <p>Cualquier duda de seguimiento se responde citando la base de conocimiento, en el mismo registro del perfil activo.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="lectura">
+      <span class="tag">04 — Cómo leer la explicación</span>
+      <h2>Un ejemplo real: por qué se rechazó este caso</h2>
+      <p class="lede">Esta es una instancia real del caso SUSESO, explicada por el motor SHAP con el modelo LightGBM convertido — <span class="mono">causa_rechazo: Falta_Antecedentes</span>, <span class="mono">patologia: Medica_General</span>. El modelo predijo <b>NO ACOGIDA</b> con 79.24% de confianza.</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Variable</th><th>Valor</th><th>Contribución SHAP</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="mono">causa_rechazo</td><td>Falta_Antecedentes</td><td class="num-col">+0.383</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill pos" style="width:69%"></div></div></td></tr>
+            <tr><td class="mono">ratioDictamenNoAcoge_U365D</td><td>0.086</td><td class="num-col">+0.363</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill pos" style="width:65%"></div></div></td></tr>
+            <tr><td class="mono">patologia</td><td>Medica_General</td><td class="num-col">+0.265</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill pos" style="width:48%"></div></div></td></tr>
+            <tr><td class="mono">cant_instrumentos</td><td>2</td><td class="num-col">−0.347</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill neg" style="width:63%"></div></div></td></tr>
+            <tr><td class="mono">departamento_cierre</td><td>Comision_Medica</td><td class="num-col">−0.210</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill neg" style="width:38%"></div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="grid-3" style="margin-top:8px;">
+        <div class="card">
+          <span class="k">SHAP</span>
+          <h3>Contribución marginal</h3>
+          <p>Cuánto empuja cada variable la predicción hacia una clase u otra, en unidades de log-odds. Positivo = hacia la clase predicha.</p>
+        </div>
+        <div class="card">
+          <span class="k">LIME</span>
+          <h3>Aproximación local</h3>
+          <p>Un modelo lineal simple ajustado solo alrededor de este caso — más fácil de leer, menos preciso lejos del punto.</p>
+        </div>
+        <div class="card">
+          <span class="k">Anchor</span>
+          <h3>Regla suficiente</h3>
+          <p>Condiciones mínimas que, si se cumplen, anclan siempre la misma predicción: <span class="mono">causa_rechazo = Falta_Antecedentes ∧ patologia = Medica_General → NO ACOGIDA</span>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="perfiles">
+      <span class="tag">05 — Un caso, tres perfiles</span>
+      <h2>La misma predicción, tres lecturas</h2>
+      <p class="lede">Estas son las narrativas reales que Vertex AI RAG Engine + Gemini generaron para el caso anterior — mismo cálculo SHAP, tres redacciones distintas.</p>
+      <div class="narratives">
+        <div class="narrative">
+          <div class="who">Especialista en IA</div>
+          <blockquote>"El modelo predice 'NO ACOGIDA' con una confianza del 79.24%. Partiendo de un base_value SHAP de 0.496, la característica causa_rechazo con valor 'Falta_Antecedentes' contribuyó significativamente en +0.383 a esta predicción. [...] la característica cant_instrumentos con valor '2.0' ejerció una influencia negativa de -0.347, empujando la predicción hacia la clase 'ACOGIDA', aunque no lo suficiente para revertir el resultado."</blockquote>
+        </div>
+        <div class="narrative">
+          <div class="who">Experto en el Dominio</div>
+          <blockquote>"El sistema ha evaluado este caso y estima con un 79.24% de probabilidad que se mantendrá la decisión de NO ACOGIDA. Los factores clave son la causa de rechazo identificada como 'Falta de Antecedentes' y la patología clasificada como 'Médica General'. Además, la proporción histórica de dictámenes no acogidos en situaciones similares durante los últimos 90 y 365 días ha sido un indicador significativo."</blockquote>
+        </div>
+        <div class="narrative">
+          <div class="who">Usuario General</div>
+          <blockquote>"Con una seguridad del 79.24%, nos indica que la decisión será 'NO ACOGIDA', lo que significa que el rechazo se mantiene. Esto se debe principalmente a que la razón del rechazo inicial fue 'Falta de Antecedentes' y a que la patología es 'Médica General'. También influye que, según el historial, otros casos parecidos han sido rechazados anteriormente."</blockquote>
+        </div>
+      </div>
+      <div class="callout">
+        <span class="ico">i</span>
+        <p>El perfil "Experto en el Dominio" tiene prohibido usar jerga de machine learning (SHAP, LIME, feature, modelo) — la reformula en términos del proceso de negocio.</p>
+      </div>
+    </section>
+
+    <section id="chat">
+      <span class="tag">06 — Chat con la base de conocimiento</span>
+      <h2>Preguntas de seguimiento</h2>
+      <p class="lede">Cualquier duda sobre la explicación puede resolverse conversando — la respuesta combina el contexto de la explicación activa con lo indexado en Vertex AI RAG Engine desde tu base de conocimiento.</p>
+      <div class="mock-window">
+        <div class="mock-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="url">chat · perfil: experto en el dominio</span></div>
+        <div class="mock-body">
+          <p style="font-size:.85rem; color:var(--ink-faint); margin-bottom:4px;">Pregunta</p>
+          <p style="margin-bottom:18px;">¿Por qué el departamento de cierre influye en el dictamen?</p>
+          <p style="font-size:.85rem; color:var(--ink-faint); margin-bottom:4px;">Respuesta</p>
+          <p style="margin:0;">El departamento asignado puede reflejar la especialización o el tipo de casos que maneja habitualmente, lo que influye en la evaluación. Esto puede llevar a criterios de revisión específicos o a una interpretación particular de la normativa, afectando el dictamen final.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq">
+      <span class="tag">07 — Preguntas frecuentes</span>
+      <h2>Antes de escribir soporte</h2>
+      <div class="faq">
+        <div class="faq-item">
+          <h4>La primera carga tarda varios segundos, ¿está caída la herramienta?</h4>
+          <p>No — el backend escala a cero cuando nadie lo usa, para no consumir recursos en vano. La primera petición después de un rato de inactividad "despierta" la instancia; las siguientes son inmediatas.</p>
+        </div>
+        <div class="faq-item">
+          <h4>Subí mi modelo y lo rechazó con un error de seguridad, ¿por qué?</h4>
+          <p>Todo archivo <span class="mono">.pkl</span> pasa por un escaneo estático antes de cargarse, buscando código ejecutable incrustado. Si algo dispara la alerta, el archivo se descarta sin llegar a cargarse. Reexporta el modelo con <span class="mono">joblib.dump</span> desde un entorno limpio si esto ocurre.</p>
+        </div>
+        <div class="faq-item">
+          <h4>¿Qué pasa si mi modelo mezcla scikit-learn y LightGBM?</h4>
+          <p>Se soporta: el conversor detecta ambos frameworks dentro del mismo pipeline y arma un entorno de conversión con las versiones exactas de cada uno.</p>
+        </div>
+        <div class="faq-item">
+          <h4>El chat respondió que el módulo no está disponible.</h4>
+          <p>Esto ocurre si la base de conocimiento aún no terminó de indexarse en Vertex AI RAG Engine, o si esa sesión no subió ningún archivo de conocimiento. Vuelve al paso de configuración y confirma que el archivo quedó cargado.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="referencia">
+      <span class="tag">08 — Referencia técnica</span>
+      <h2>Para quien integra o depura</h2>
+      <p class="lede">Entorno de producción, en Cloud Run, región <span class="mono">us-central1</span>.</p>
+      <div class="grid-2" style="margin-bottom:24px;">
+        <div class="card">
+          <span class="k">Frontend</span>
+          <h3 class="mono" style="font-size:.88rem; font-weight:500;">explicabilidad-frontend-92911726008<br>.us-central1.run.app</h3>
+        </div>
+        <div class="card">
+          <span class="k">Backend / API</span>
+          <h3 class="mono" style="font-size:.88rem; font-weight:500;">explicabilidad-api-92911726008<br>.us-central1.run.app/api</h3>
+        </div>
+      </div>
+      <div class="card" style="padding:4px 0;">
+        <div style="padding:16px 20px 4px;"><span class="k" style="margin-bottom:0;">Endpoints principales</span></div>
+        <div style="padding:0 20px 16px;">
+          <div class="endpoint"><span class="verb">POST</span><div><span class="path">/processing/start</span><span class="desc">Crea una sesión de trabajo (jobId)</span></div></div>
+          <div class="endpoint"><span class="verb">POST</span><div><span class="path">/upload/{dataset|model|knowledge-base}</span><span class="desc">Sube un archivo a la sesión</span></div></div>
+          <div class="endpoint"><span class="verb">POST</span><div><span class="path">/job/{jobId}/convert</span><span class="desc">Convierte el modelo a ONNX y detecta clases</span></div></div>
+          <div class="endpoint"><span class="verb">POST</span><div><span class="path">/job/{jobId}/labels</span><span class="desc">Asigna nombres legibles a las clases</span></div></div>
+          <div class="endpoint"><span class="verb">GET</span><div><span class="path">/dataset/random-instance</span><span class="desc">Sortea un caso del dataset de referencia</span></div></div>
+          <div class="endpoint"><span class="verb">POST</span><div><span class="path">/explain</span><span class="desc">Predicción + SHAP/LIME/Anchor + narrativa</span></div></div>
+          <div class="endpoint"><span class="verb">POST</span><div><span class="path">/chat</span><span class="desc">Conversación con contexto RAG</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      GobLab UAI — Herramienta de Explicabilidad · Desplegada en Cloud Run con Vertex AI RAG Engine · Manual generado tras una prueba end-to-end sobre el caso SUSESO.
+    </footer>
+  </main>
+</div>
