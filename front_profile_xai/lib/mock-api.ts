@@ -1,5 +1,16 @@
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/api`
 
+// Secreto compartido con el backend (API_KEY). Vacío en local, donde el
+// backend no exige autenticación por defecto.
+function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const apiKey = process.env.NEXT_PUBLIC_API_KEY
+  return {
+    ...extra,
+    "ngrok-skip-browser-warning": "true",
+    ...(apiKey ? { "X-API-Key": apiKey } : {}),
+  }
+}
+
 export async function downloadExplanationReport(payload: {
   profile: string
   explanation: string
@@ -9,7 +20,7 @@ export async function downloadExplanationReport(payload: {
 }): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/report/explanation`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error("Error al generar el reporte")
@@ -45,10 +56,7 @@ export interface FeedbackPayload {
 export async function submitFeedback(payload: FeedbackPayload): Promise<{ success: boolean; file: string; message: string }> {
   const res = await fetch(`${API_BASE_URL}/feedback`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "true",
-    },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   })
   if (!res.ok) {
@@ -59,9 +67,9 @@ export async function submitFeedback(payload: FeedbackPayload): Promise<{ succes
 }
 
 export async function startProcessing() {
-  const res = await fetch(`${API_BASE_URL}/processing/start`, { 
+  const res = await fetch(`${API_BASE_URL}/processing/start`, {
     method: "POST",
-    headers: { "ngrok-skip-browser-warning": "true" }
+    headers: authHeaders()
   });
   const data = await res.json();
   localStorage.setItem("jobId", data.jobId);
@@ -73,10 +81,10 @@ export async function uploadDataset(files: File[]) {
   const formData = new FormData();
   files.forEach(f => formData.append("files", f));
   
-  const res = await fetch(`${API_BASE_URL}/upload/dataset?jobId=${jobId}`, { 
-    method: "POST", 
-    headers: { "ngrok-skip-browser-warning": "true" },
-    body: formData 
+  const res = await fetch(`${API_BASE_URL}/upload/dataset?jobId=${jobId}`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: formData
   });
   return await res.json();
 }
@@ -85,7 +93,7 @@ export async function getDatasetSchema(): Promise<DatasetSchema> {
   try {
     const jobId = localStorage.getItem("jobId");
     const res = await fetch(`${API_BASE_URL}/dataset/schema?jobId=${jobId}`, {
-      headers: { "ngrok-skip-browser-warning": "true" }
+      headers: authHeaders()
     });
     
     if (!res.ok) throw new Error(`El servidor respondió con código ${res.status}`);
@@ -100,7 +108,7 @@ export async function getRandomInstance(): Promise<InstanceData> {
   try {
     const jobId = localStorage.getItem("jobId");
     const res = await fetch(`${API_BASE_URL}/dataset/random-instance?jobId=${jobId}`, {
-      headers: { "ngrok-skip-browser-warning": "true" }
+      headers: authHeaders()
     });
     
     if (!res.ok) throw new Error(`El servidor respondió con código ${res.status}`);
@@ -117,10 +125,10 @@ export async function uploadKnowledgeBase(files: File[]) {
   const formData = new FormData();
   files.forEach(f => formData.append("files", f));
   
-  const res = await fetch(`${API_BASE_URL}/upload/knowledge-base?jobId=${jobId}`, { 
-    method: "POST", 
-    headers: { "ngrok-skip-browser-warning": "true" },
-    body: formData 
+  const res = await fetch(`${API_BASE_URL}/upload/knowledge-base?jobId=${jobId}`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: formData
   });
   return await res.json();
 }
@@ -130,10 +138,10 @@ export async function uploadModel(files: File[]) {
   const formData = new FormData();
   files.forEach(f => formData.append("files", f));
   
-  const res = await fetch(`${API_BASE_URL}/upload/model?jobId=${jobId}`, { 
-    method: "POST", 
-    headers: { "ngrok-skip-browser-warning": "true" },
-    body: formData 
+  const res = await fetch(`${API_BASE_URL}/upload/model?jobId=${jobId}`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: formData
   });
   return await res.json();
 }
@@ -142,7 +150,7 @@ export async function convertModel(): Promise<{ status: string; classes_detected
   const jobId = localStorage.getItem("jobId");
   const res = await fetch(`${API_BASE_URL}/job/${jobId}/convert`, {
     method: "POST",
-    headers: { "ngrok-skip-browser-warning": "true" },
+    headers: authHeaders(),
   });
   if (!res.ok) {
     const err = await res.json();
@@ -155,10 +163,7 @@ export async function setLabels(labelMap: Record<string, string>) {
   const jobId = localStorage.getItem("jobId");
   const res = await fetch(`${API_BASE_URL}/job/${jobId}/labels`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "true",
-    },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ labelMap }),
   });
   if (!res.ok) {
@@ -174,10 +179,7 @@ export async function generateExplanation(profile: string, instance: any) {
   
   const res = await fetch(`${API_BASE_URL}/explain`, {
     method: "POST",
-    headers: { 
-      "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "true" 
-    },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     // Enviamos el ID, el perfil de la audiencia y el diccionario con los datos del paciente/sistema
     body: JSON.stringify({ jobId, profile, instance }) 
   });
@@ -195,10 +197,7 @@ export async function chatRag(message: string, history: any[],explanationText: s
   
   const res = await fetch(`${API_BASE_URL}/chat`, {
     method: "POST",
-    headers: { 
-      "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "true"
-    },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ 
       jobId: jobId, 
       message: message, 

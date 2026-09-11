@@ -8,7 +8,9 @@ COPY . .
 
 # NEXT_PUBLIC_* se inyecta en build time (Next.js las inlinea en el bundle).
 ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_API_KEY
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_KEY=$NEXT_PUBLIC_API_KEY
 RUN npm run build
 
 FROM node:20-slim
