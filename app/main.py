@@ -551,7 +551,7 @@ def _format_technical_for_frontend(result: dict) -> dict:
 
     if "anchor" in exps:
             anchor_data = exps["anchor"].get("anchor", {})
-            conditions = anchor_data.get("conditions", [])
+            conditions = list(anchor_data.get("conditions", []))
             
             if conditions:
                 # Rescatamos el nombre o número de la clase que el modelo predijo
