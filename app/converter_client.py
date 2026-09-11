@@ -101,6 +101,7 @@ class _CloudBuildConverterBackend(ConverterBackend):
         gcs_model = f"conversions/{job_id}/model{model_suffix}"
         gcs_dataset = f"conversions/{job_id}/dataset.csv"
         gcs_onnx = f"conversions/{job_id}/model_agnostico.onnx"
+        gcs_metadata = f"conversions/{job_id}/model_agnostico.metadata.json"
         gcs_source = f"conversions/{job_id}/source.tar.gz"
 
         storage_client = storage.Client()
@@ -190,6 +191,14 @@ class _CloudBuildConverterBackend(ConverterBackend):
                           "/workspace/model_agnostico.onnx",
                           f"gs://{self._gcs_bucket}/{gcs_onnx}"],
                 ),
+                # Subir metadata.json (clases detectadas) a GCS — sin este paso,
+                # el backend nunca se entera de las clases del modelo convertido.
+                cloudbuild_v1.BuildStep(
+                    name="gcr.io/cloud-builders/gsutil",
+                    args=["cp",
+                          "/workspace/model_agnostico.metadata.json",
+                          f"gs://{self._gcs_bucket}/{gcs_metadata}"],
+                ),
             ],
             # Cachear la imagen del sandbox en GCR para builds futuras más rápidas
             images=[image_name],
@@ -207,12 +216,18 @@ class _CloudBuildConverterBackend(ConverterBackend):
                 f"Log: https://console.cloud.google.com/cloud-build/builds/{result.id}"
             )
 
-        # 5. Descargar .onnx al filesystem local del backend
-        logger.info("CloudBuild: descargando .onnx desde GCS...")
+        # 5. Descargar .onnx + metadata.json al filesystem local del backend
+        logger.info("CloudBuild: descargando .onnx y metadata desde GCS...")
         bucket.blob(gcs_onnx).download_to_filename(onnx_path)
+        metadata_path = os.path.splitext(onnx_path)[0] + ".metadata.json"
+        metadata_blob = bucket.blob(gcs_metadata)
+        if metadata_blob.exists():
+            metadata_blob.download_to_filename(metadata_path)
+        else:
+            logger.warning("CloudBuild: no se encontró metadata.json en GCS (%s)", gcs_metadata)
 
         # Limpiar archivos temporales de GCS
-        for blob_name in [gcs_model, gcs_dataset, gcs_onnx, gcs_source]:
+        for blob_name in [gcs_model, gcs_dataset, gcs_onnx, gcs_metadata, gcs_source]:
             try:
                 bucket.blob(blob_name).delete()
             except Exception:
