@@ -42,17 +42,24 @@
   a{color:var(--accent);}
   code,.mono{font-family:var(--font-mono);}
 
-  .shell{max-width:900px; margin:0 auto; padding:48px 24px 120px;}
-  .cover{padding-bottom:32px; margin-bottom:40px; border-bottom:1px solid var(--line);}
+  .shell{max-width:920px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{padding-bottom:32px; margin-bottom:32px; border-bottom:1px solid var(--line);}
   .cover .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:.76rem; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); font-weight:600; margin-bottom:16px;}
   .cover .eyebrow::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--accent);}
-  .cover h1{font-size:2.3rem; line-height:1.15; max-width:22ch;}
+  .cover h1{font-size:2.3rem; line-height:1.15; max-width:24ch;}
   .cover .dek{font-size:1.05rem; color:var(--ink-soft); max-width:60ch; margin-top:12px;}
   .cover .meta{display:flex; flex-wrap:wrap; gap:10px; margin-top:22px;}
   .pill{display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px; border:1px solid var(--line-strong); font-size:.78rem; color:var(--ink-soft); background:var(--surface);}
   .pill b{color:var(--ink); font-weight:600;}
   .pill.good{border-color:color-mix(in srgb, var(--good) 40%, var(--line)); background:var(--good-soft); color:var(--good);}
   .pill.good b{color:var(--good);}
+
+  .note{
+    display:flex; gap:14px; padding:16px 18px; border-radius:var(--radius-m);
+    background:var(--surface-2); border:1px solid var(--line); margin-bottom:32px; font-size:.88rem; color:var(--ink-soft);
+  }
+  .note .ico{font-family:var(--font-mono); font-weight:700; color:var(--accent); flex:none;}
+  .note p{margin:0;}
 
   .verdict{
     display:flex; gap:18px; align-items:center; padding:20px 24px; border-radius:var(--radius-m);
@@ -69,6 +76,7 @@
   section{margin-bottom:52px; scroll-margin-top:24px;}
   section > .tag{font-family:var(--font-mono); font-size:.76rem; color:var(--accent); letter-spacing:.04em; margin-bottom:8px; display:block;}
   section h2{font-size:1.5rem; margin-bottom:.35em;}
+  section h3.sub{font-size:1.1rem; margin:28px 0 4px;}
   section .lede{color:var(--ink-soft); font-size:1rem; margin-bottom:24px; max-width:64ch;}
 
   .grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
@@ -88,20 +96,36 @@
   .num-col{font-variant-numeric:tabular-nums; font-family:var(--font-mono); font-size:.82rem;}
 
   .steps{display:flex; flex-direction:column;}
-  .step{display:grid; grid-template-columns:36px minmax(0,1fr); gap:16px; padding:16px 0; border-top:1px solid var(--line);}
+  .step{padding:22px 0; border-top:1px solid var(--line);}
   .step:last-child{border-bottom:1px solid var(--line);}
+  .step-head{display:grid; grid-template-columns:32px minmax(0,1fr); gap:14px; margin-bottom:12px;}
   .step .num{width:28px; height:28px; border-radius:50%; background:var(--accent); color:var(--accent-ink); font-family:var(--font-mono); font-weight:600; font-size:.82rem; display:flex; align-items:center; justify-content:center;}
-  .step h3{font-size:.98rem; margin-bottom:4px;}
-  .step p{font-size:.88rem; color:var(--ink-soft); margin:0;}
-  .step .status{display:inline-flex; align-items:center; gap:6px; font-size:.76rem; font-family:var(--font-mono); margin-top:8px; color:var(--good);}
+  .step h3{font-size:1rem; margin-bottom:3px;}
+  .step p.desc{font-size:.88rem; color:var(--ink-soft); margin:0;}
+  .step .status{display:inline-flex; align-items:center; gap:6px; font-size:.76rem; font-family:var(--font-mono); margin-top:10px; color:var(--good);}
   .step .status::before{content:"✓"; font-weight:700;}
+  .step .shot-wrap{margin-left:46px;}
 
   .mock-window{border:1px solid var(--line); border-radius:var(--radius-m); overflow:hidden; background:var(--surface); box-shadow:var(--shadow);}
   .mock-bar{display:flex; align-items:center; gap:8px; padding:9px 14px; background:var(--surface-2); border-bottom:1px solid var(--line);}
   .mock-bar .dot{width:9px; height:9px; border-radius:50%; background:var(--line-strong);}
   .mock-bar .url{margin-left:8px; font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint); background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:3px 10px;}
-  .mock-body{padding:20px 22px;}
-  .repro-tag{font-size:.68rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); font-family:var(--font-mono);}
+  .mock-body{padding:18px 20px; font-size:.88rem;}
+  .repro-tag{font-size:.66rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); font-family:var(--font-mono); margin-left:auto;}
+
+  .field-row{display:grid; grid-template-columns:180px 1fr; gap:12px; padding:6px 0; font-size:.86rem; border-top:1px solid var(--line);}
+  .field-row:first-child{border-top:none;}
+  .field-row .k{color:var(--ink-faint); font-family:var(--font-mono); font-size:.78rem;}
+  .field-row .v{font-weight:500;}
+  .file-chip{display:flex; align-items:center; gap:8px; background:var(--surface-2); border:1px solid var(--line); border-radius:6px; padding:6px 10px; font-size:.82rem; margin-bottom:6px;}
+  .file-chip .sz{color:var(--ink-faint); font-size:.74rem; margin-left:auto;}
+  .progress-track{height:6px; border-radius:3px; background:var(--surface-3); overflow:hidden; margin:8px 0;}
+  .progress-fill{height:100%; background:var(--accent); border-radius:3px;}
+  .btn-mock{display:inline-flex; align-items:center; justify-content:center; padding:9px 18px; border-radius:8px; background:var(--accent); color:var(--accent-ink); font-size:.86rem; font-weight:500; margin-top:10px;}
+  .btn-mock.spin::before{content:"↻ "; }
+  .class-pair{display:flex; gap:10px; margin:10px 0;}
+  .class-box{flex:1; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:.84rem;}
+  .class-box .lab{font-family:var(--font-mono); font-size:.7rem; color:var(--ink-faint);}
 
   .narratives{display:flex; flex-direction:column; gap:12px; margin:16px 0;}
   .narrative{border:1px solid var(--line); border-radius:var(--radius-m); background:var(--surface); padding:16px 18px;}
@@ -113,6 +137,13 @@
   .bubble{max-width:80%; padding:10px 14px; border-radius:12px; font-size:.9rem;}
   .bubble.user{align-self:flex-end; background:var(--accent); color:var(--accent-ink); border-bottom-right-radius:2px;}
   .bubble.bot{align-self:flex-start; background:var(--surface-2); border:1px solid var(--line); border-bottom-left-radius:2px;}
+
+  .qa-grid{display:flex; flex-direction:column; gap:16px; margin:16px 0;}
+  .qa-card{border:1px solid var(--line); border-radius:var(--radius-m); overflow:hidden;}
+  .qa-head{display:flex; align-items:center; gap:10px; padding:10px 16px; background:var(--surface-2); border-bottom:1px solid var(--line);}
+  .qa-head .verdict-pill{font-family:var(--font-mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; padding:2px 8px; border-radius:5px; background:var(--good); color:#fff; font-weight:600;}
+  .qa-head .obj{font-size:.78rem; color:var(--ink-faint); margin-left:auto;}
+  .qa-body{padding:14px 16px;}
 
   .finding{border:1px solid var(--line); border-radius:var(--radius-m); overflow:hidden; margin-bottom:16px;}
   .finding-head{display:flex; align-items:center; gap:12px; padding:14px 18px; background:var(--danger-soft); border-bottom:1px solid color-mix(in srgb, var(--danger) 35%, var(--line));}
@@ -131,33 +162,39 @@
 
 <div class="shell">
   <div class="cover">
-    <span class="eyebrow">Reporte de prueba de sistema</span>
+    <span class="eyebrow">Reporte de prueba de sistema · doble como manual paso a paso</span>
     <h1>Profile XAI end-to-end, caso oncológico demo</h1>
-    <p class="dek">Ejecución real contra el entorno de producción en Cloud Run — sin datos simulados. Subida de archivos vía navegador real, conversión de modelo vía Cloud Build real, explicación y chat contra Vertex AI RAG Engine real.</p>
+    <p class="dek">Ejecución real contra producción en Cloud Run — sin datos simulados. Subida de archivos vía navegador real, conversión vía Cloud Build real, explicación y chat contra Vertex AI RAG Engine real. Incluye una segunda ejecución más rigurosa: una instancia de contraste y cuatro preguntas de estrés al chatbot.</p>
     <div class="meta">
-      <span class="pill">10-11 sept 2026</span>
+      <span class="pill">10–11 sept 2026</span>
       <span class="pill">explicabilidad-frontend / explicabilidad-api · us-central1</span>
-      <span class="pill good"><b>3/3</b> perfiles verificados</span>
+      <span class="pill good"><b>6/6</b> narrativas verificadas</span>
+      <span class="pill good"><b>4/4</b> pruebas de chat superadas</span>
     </div>
+  </div>
+
+  <div class="note">
+    <span class="ico">i</span>
+    <p>Cada pantalla de abajo es una <b>reconstrucción fiel</b> de la interfaz real — mismo layout, mismos textos, mismos valores exactos observados durante la sesión — no una captura de pantalla incrustada. El entorno de navegador usado no permite exportar las imágenes como archivo, así que se optó por reconstrucción verificable en vez de simular una captura falsa.</p>
   </div>
 
   <div class="verdict">
     <div class="badge">✓</div>
     <div>
-      <h2>Sistema aprobado — con 2 bugs críticos corregidos durante la prueba</h2>
-      <p>El flujo completo (subida → conversión → explicación → chat RAG) funciona de punta a punta en los 3 perfiles. La prueba encontró y corrigió dos fallas que habrían dejado la herramienta inutilizable o el RAG completamente inoperante en producción — ver sección 04.</p>
+      <h2>Sistema aprobado — con 2 bugs críticos corregidos durante la primera prueba</h2>
+      <p>El flujo completo (subida → conversión → etiquetado → explicación → chat) funciona de punta a punta, verificado con <b>dos instancias distintas</b> en los <b>3 perfiles</b> y <b>4 preguntas de estrés</b> al chatbot, incluyendo un caso de rechazo correcto fuera de dominio.</p>
     </div>
   </div>
 
   <section id="caso">
     <span class="tag">01 — Caso de prueba</span>
     <h2>Detección de tumor maligno/benigno (demo educativo)</h2>
-    <p class="lede">Caso sintético y ficticio, declarado explícitamente como no clínico por el propio archivo de contexto — ideal para probar el pipeline completo con un modelo y datos nuevos que la herramienta nunca había visto.</p>
+    <p class="lede">Caso sintético y ficticio, declarado explícitamente como no clínico por el propio archivo de contexto — modelo y datos que la herramienta nunca había visto antes de esta sesión.</p>
     <div class="grid-3">
       <div class="card">
         <span class="k">Modelo</span>
         <h3>CANCER_DEMO_pipeline.pkl</h3>
-        <p>sklearn Pipeline: TargetEncoder (variable categórica) + LGBMClassifier. AUC test declarado: 0.81.</p>
+        <p>sklearn Pipeline: TargetEncoder + LGBMClassifier. AUC test declarado: 0.81.</p>
       </div>
       <div class="card">
         <span class="k">Dataset</span>
@@ -167,86 +204,134 @@
       <div class="card">
         <span class="k">Base de conocimiento</span>
         <h3>contexto_modelo.txt</h3>
-        <p>Documento de referencia con la descripción del problema, variables y métricas — nunca antes indexado por la herramienta.</p>
+        <p>Descripción del problema, variables y métricas — nunca antes indexado por la herramienta.</p>
       </div>
     </div>
   </section>
 
-  <section id="flujo">
-    <span class="tag">02 — Flujo ejecutado</span>
-    <h2>Paso a paso, con verificación real en cada etapa</h2>
-    <p class="lede">Cada paso se ejecutó en un navegador real contra <span class="mono">explicabilidad-frontend</span>, y se verificó contra los logs de Cloud Run / Cloud Build del proyecto — no se simuló ninguna respuesta.</p>
+  <section id="manual">
+    <span class="tag">02 — Manual paso a paso (con la ejecución real)</span>
+    <h2>De la subida de archivos a la explicación</h2>
+    <p class="lede">Cada paso muestra el estado real de la pantalla en el momento en que se ejecutó, y su verificación correspondiente contra logs de Cloud Run / Cloud Build.</p>
+
     <div class="steps">
       <div class="step">
-        <div class="num">1</div>
-        <div>
-          <h3>Acceso como invitado + 3 perfiles habilitados</h3>
-          <p>Login guest, los 3 perfiles (Especialista en IA, Experto en el Dominio, Usuario General) quedan habilitados por defecto.</p>
-          <span class="status">Verificado en pantalla</span>
+        <div class="step-head">
+          <div class="num">1</div>
+          <div><h3>Acceso e inicio de sesión</h3><p class="desc">Continuar como invitado — perfiles habilitados por defecto.</p></div>
+        </div>
+        <div class="shot-wrap">
+          <div class="mock-window">
+            <div class="mock-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="url">/auth</span></div>
+            <div class="mock-body">
+              <b>Acceso</b><br>
+              <span style="color:var(--ink-soft); font-size:.85rem;">Inicie sesión o continúe como invitado para comenzar su análisis</span>
+              <div class="btn-mock" style="margin-top:12px; background:var(--surface-2); color:var(--ink); border:1px solid var(--line);">Continuar como invitado</div>
+            </div>
+          </div>
+          <span class="status">Redirige a /profile-select</span>
         </div>
       </div>
+
       <div class="step">
-        <div class="num">2</div>
-        <div>
-          <h3>Subida de los 3 archivos reales</h3>
-          <p>contexto_modelo.txt, CANCER_DEMO_pipeline.pkl y dataset_explicabilidad.csv subidos vía input de archivo real (no simulado). Progreso: 3/3 listos.</p>
-          <span class="status">Confirmado en logs: 200 OK en /upload/knowledge-base, /upload/dataset, /upload/model</span>
+        <div class="step-head">
+          <div class="num">2</div>
+          <div><h3>Perfiles de explicación</h3><p class="desc">Los 3 perfiles quedan habilitados por defecto: Especialista en IA, Experto en el Dominio, Usuario General.</p></div>
+        </div>
+        <div class="shot-wrap">
+          <span class="status">3 tarjetas seleccionadas, "Todos los perfiles habilitados"</span>
         </div>
       </div>
+
       <div class="step">
-        <div class="num">3</div>
-        <div>
-          <h3>Conversión del modelo (.pkl → .onnx)</h3>
-          <p>Disparó un job real de Cloud Build que construyó el sandbox de conversión y detectó el framework sklearn+LGBM automáticamente.</p>
+        <div class="step-head">
+          <div class="num">3</div>
+          <div><h3>Subida de los 3 archivos reales</h3><p class="desc">contexto_modelo.txt, CANCER_DEMO_pipeline.pkl y dataset_explicabilidad.csv subidos vía input de archivo real del navegador — no simulado.</p></div>
+        </div>
+        <div class="shot-wrap">
+          <div class="mock-window">
+            <div class="mock-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="url">/setup</span></div>
+            <div class="mock-body">
+              <div class="file-chip">📄 contexto_modelo.txt <span class="sz">3.9 KB</span></div>
+              <div class="file-chip">📄 CANCER_DEMO_pipeline.pkl <span class="sz">340.9 KB</span></div>
+              <div class="file-chip">📄 dataset_explicabilidad.csv <span class="sz">14.1 KB</span></div>
+              <div class="progress-track"><div class="progress-fill" style="width:100%"></div></div>
+              <span style="font-size:.8rem; color:var(--ink-soft);">Progreso de la configuración — 3/3 listos</span>
+            </div>
+          </div>
+          <span class="status">200 OK en /upload/knowledge-base, /upload/dataset, /upload/model</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-head">
+          <div class="num">4</div>
+          <div><h3>Conversión del modelo (.pkl → .onnx)</h3><p class="desc">Job real de Cloud Build: detecta sklearn+LGBM y arma el sandbox de conversión.</p></div>
+        </div>
+        <div class="shot-wrap">
+          <div class="mock-window">
+            <div class="mock-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="url">/setup</span></div>
+            <div class="mock-body">
+              <div class="btn-mock spin">Convirtiendo modelo (Docker in Docker)…</div>
+            </div>
+          </div>
           <span class="status">Cloud Build job SUCCESS · 2 clases detectadas: [0, 1]</span>
         </div>
       </div>
+
       <div class="step">
-        <div class="num">4</div>
-        <div>
-          <h3>Etiquetado: 0 → Benigno, 1 → Maligno</h3>
-          <p>Nombres asignados manualmente según el contexto del modelo.</p>
-          <span class="status">Guardado correctamente</span>
+        <div class="step-head">
+          <div class="num">5</div>
+          <div><h3>Etiquetado de clases</h3><p class="desc">0 → Benigno, 1 → Maligno.</p></div>
+        </div>
+        <div class="shot-wrap">
+          <div class="mock-window">
+            <div class="mock-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="url">/setup/labels</span></div>
+            <div class="mock-body">
+              <b>Nombra las clases del modelo</b> — El modelo tiene 2 clases.
+              <div class="class-pair">
+                <div class="class-box"><span class="lab">CLASE 0</span><br>Benigno</div>
+                <div class="class-box"><span class="lab">CLASE 1</span><br>Maligno</div>
+              </div>
+            </div>
+          </div>
+          <span class="status">POST /job/{id}/labels → 200 OK</span>
         </div>
       </div>
+
       <div class="step">
-        <div class="num">5</div>
-        <div>
-          <h3>Instancia aleatoria del dataset real</h3>
-          <p>consistencia=Firme, edad=87, tamano_tumor_cm=0.42cm, antecedentes_familiares=0, bordes_irregulares=0.</p>
-          <span class="status">Poblado desde /dataset/random-instance</span>
+        <div class="step-head">
+          <div class="num">6</div>
+          <div><h3>Instancia y explicación</h3><p class="desc">Formulario poblado (aleatorio o manual) → 3 perfiles disponibles → explicación con SHAP/LIME/Anchor + narrativa RAG.</p></div>
+        </div>
+        <div class="shot-wrap">
+          <span class="status">Ver secciones 03 y 04 — dos instancias completas, 6 narrativas verificadas</span>
         </div>
       </div>
+
       <div class="step">
-        <div class="num">6</div>
-        <div>
-          <h3>Explicación generada en los 3 perfiles</h3>
-          <p>Misma instancia, mismo cálculo SHAP/LIME de base — 3 narrativas distintas generadas por Gemini vía Vertex AI. Ver sección 03.</p>
-          <span class="status">200 OK en /api/explain × 3</span>
+        <div class="step-head">
+          <div class="num">7</div>
+          <div><h3>Chat con la base de conocimiento</h3><p class="desc">Panel "RAG Chat Assistant" disponible en la vista de explicación de cualquier perfil.</p></div>
         </div>
-      </div>
-      <div class="step">
-        <div class="num">7</div>
-        <div>
-          <h3>Chat RAG: pregunta que solo la base de conocimiento puede responder</h3>
-          <p>Ver sección 05 — resultado real, con logs de retrieval de Vertex AI RAG Engine.</p>
-          <span class="status">"Recuperados 3 chunks para query" en logs de app.rag</span>
+        <div class="shot-wrap">
+          <span class="status">Ver sección 05 — 4 preguntas de estrés, todas correctas</span>
         </div>
       </div>
     </div>
   </section>
 
-  <section id="perfiles">
-    <span class="tag">03 — Resultado por perfil</span>
-    <h2>Mismo caso, mismo cálculo, tres lecturas reales</h2>
-    <p class="lede">Instancia: tumor de 0.42cm, consistencia firme, paciente de 87 años, sin antecedentes familiares ni bordes irregulares. Predicción del modelo: <b>Maligno</b>, confianza 57.75% — un caso límite genuino (edad alta empuja a maligno; tamaño pequeño y bordes regulares empujan a benigno).</p>
+  <section id="caso-a">
+    <span class="tag">03 — Instancia A: paciente de edad avanzada</span>
+    <h2>Caso límite genuino</h2>
+    <p class="lede">consistencia=Firme, edad=87, tamano_tumor_cm=0.42cm, tasa_crecimiento_cm_mes bajo, sin antecedentes ni bordes irregulares. Predicción: <b>Maligno</b>, confianza <b>57.75%</b> — señales contradictorias (edad alta empuja a maligno; tamaño pequeño y bordes regulares empujan a benigno).</p>
 
     <div class="table-scroll">
       <table>
         <thead><tr><th>Variable</th><th>Valor</th><th>Peso LIME</th></tr></thead>
         <tbody>
           <tr><td class="mono">tamano_tumor_cm</td><td>0.42 cm</td><td class="num-col">0.172</td></tr>
-          <tr><td class="mono">tasa_crecimiento_cm_mes</td><td>—</td><td class="num-col">0.110</td></tr>
+          <tr><td class="mono">tasa_crecimiento_cm_mes</td><td>bajo</td><td class="num-col">0.110</td></tr>
           <tr><td class="mono">edad</td><td>87</td><td class="num-col">0.077</td></tr>
           <tr><td class="mono">consistencia</td><td>Firme</td><td class="num-col">−0.038</td></tr>
           <tr><td class="mono">bordes_irregulares</td><td>0</td><td class="num-col">0.002</td></tr>
@@ -258,57 +343,120 @@
     <div class="narratives">
       <div class="narrative">
         <div class="who"><span class="name">Especialista en IA</span></div>
-        <blockquote>Confianza: <b>57.75%</b>. Panel técnico con pestañas SHAP / LIME / Anchors y pesos de variable exactos (tabla arriba) — sin narrativa en prosa, datos directos de los explicadores.</blockquote>
+        <blockquote>Confianza: <b>57.75%</b>. Panel técnico con SHAP / LIME / Anchors y pesos exactos (tabla arriba).</blockquote>
       </div>
       <div class="narrative">
         <div class="who"><span class="name">Experto en el Dominio</span></div>
-        <blockquote>"El sistema ha clasificado este caso como <b>Maligno</b> con una probabilidad del 57.75%. Esta decisión se basa principalmente en la <b>edad avanzada del paciente (87 años)</b>, que fue el factor que más contribuyó a esta clasificación. Sin embargo, el <b>tamaño relativamente pequeño del tumor (0.42 cm)</b> y la <b>ausencia de bordes irregulares</b> fueron los factores que más fuertemente sugirieron un carácter benigno, contrarrestando significativamente la predicción de malignidad. La <b>consistencia firme</b> del tumor, en lugar de dura, también disminuyó la probabilidad de malignidad."</blockquote>
+        <blockquote>"El sistema ha clasificado este caso como <b>Maligno</b> con una probabilidad del 57.75%. Esta decisión se basa principalmente en la <b>edad avanzada del paciente (87 años)</b> [...] Sin embargo, el <b>tamaño relativamente pequeño del tumor (0.42 cm)</b> y la <b>ausencia de bordes irregulares</b> [...] contrarrestando significativamente la predicción de malignidad."</blockquote>
       </div>
       <div class="narrative">
         <div class="who"><span class="name">Usuario General</span></div>
-        <blockquote>"Hola, ¡no te preocupes! Aquí te explico lo que el sistema ha calculado de forma sencilla. El sistema predice que el tumor es <b>Maligno</b> con un 57.75% de probabilidad. La razón principal de esta predicción es la <b>edad del paciente (87 años)</b> [...] Sin embargo, el <b>tamaño del tumor es bastante pequeño (0.42 cm)</b> y su consistencia es <b>Firme</b>, características que suelen asociarse a casos menos preocupantes y que hicieron que el sistema no estuviera tan seguro de su predicción."</blockquote>
+        <blockquote>"El sistema predice que el tumor es <b>Maligno</b> con un 57.75% de probabilidad. La razón principal [...] es la edad del paciente (87 años) [...] Sin embargo, el tamaño del tumor es bastante pequeño (0.42 cm) y su consistencia es Firme, características que suelen asociarse a casos menos preocupantes."</blockquote>
       </div>
     </div>
   </section>
 
-  <section id="rag">
-    <span class="tag">04 — Verificación del RAG</span>
-    <h2>¿El chat realmente usa la base de conocimiento?</h2>
-    <p class="lede">Prueba de fuego: preguntar un dato que <b>solo existe en el documento subido</b> (el AUC del modelo, 0.81) — no está en el dataset, ni en la explicación SHAP, ni es algo que un LLM pueda adivinar.</p>
-    <div class="mock-window">
-      <div class="mock-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="url">RAG Chat Assistant · perfil: experto en el dominio</span></div>
+  <section id="caso-b">
+    <span class="tag">04 — Instancia B: paciente joven, crecimiento acelerado</span>
+    <h2>Prueba de contraste — segunda ejecución rigurosa</h2>
+    <p class="lede">consistencia=Blanda, edad=24, tamano_tumor_cm=0.5cm, tasa_crecimiento_cm_mes=3.0 (alto), sin antecedentes ni bordes irregulares. A pesar de un perfil superficialmente benigno (joven, tumor pequeño, blando), el modelo predice <b>Maligno</b> con <b>63.75%</b> de confianza — dominado por la velocidad de crecimiento, tal como describe <span class="mono">contexto_modelo.txt</span> ("un crecimiento rápido es una señal de alarma clínica").</p>
+
+    <div class="mock-window" style="margin-bottom:20px;">
+      <div class="mock-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="url">Explicación Directa (RAW) → Anchors</span></div>
       <div class="mock-body">
-        <div class="chatlog">
-          <div class="bubble user">¿Qué AUC obtuvo este modelo en el conjunto de test?</div>
-          <div class="bubble bot">El modelo alcanzó un AUC de 0.81 en el conjunto de test.</div>
+        <div class="file-chip" style="background:var(--surface);">tasa_crecimiento_cm_mes &gt; 0.50</div>
+        <div class="file-chip" style="background:var(--accent-soft); border-color:var(--accent-soft-line);">➔ ENTONCES LA CLASE ES: Maligno</div>
+      </div>
+    </div>
+
+    <div class="narratives">
+      <div class="narrative">
+        <div class="who"><span class="name">Especialista en IA</span></div>
+        <blockquote>Confianza: <b>63.75%</b>. Regla Anchor: <span class="mono">tasa_crecimiento_cm_mes &gt; 0.50 → Maligno</span>. LIME: tamano_tumor_cm 0.004, edad 0.003, consistencia −0.001 — todas las demás variables casi neutras frente al peso de la tasa de crecimiento.</blockquote>
+      </div>
+      <div class="narrative">
+        <div class="who"><span class="name">Experto en el Dominio</span></div>
+        <blockquote>"Este sistema de apoyo a la decisión sugiere que el tumor presenta características de malignidad con una probabilidad del 63.75%. El factor más determinante [...] es la <b>rápida tasa de crecimiento observada, de 3.0 cm por mes</b>, lo cual es un signo de alarma significativo. Sin embargo, otros indicadores como el <b>tamaño reducido del tumor (0.5 cm)</b>, la <b>edad joven del paciente (24 años)</b> y la <b>consistencia blanda</b> [...] actúan en dirección contraria [...] el marcado crecimiento tumoral inclina la balanza hacia la sospecha de malignidad."</blockquote>
+      </div>
+      <div class="narrative">
+        <div class="who"><span class="name">Usuario General</span></div>
+        <blockquote>"El modelo predice que este tumor tiene características de ser <b>Maligno</b>, con una probabilidad del 63.75%. La razón más importante [...] es que el tumor está creciendo muy rápido. Aunque otros factores como el tamaño pequeño del tumor y la edad joven del paciente apuntaban a que fuera benigno, la velocidad de crecimiento fue el factor que más peso tuvo para inclinar la balanza hacia la malignidad."</blockquote>
+      </div>
+    </div>
+  </section>
+
+  <section id="chat">
+    <span class="tag">05 — Prueba de estrés del chatbot RAG</span>
+    <h2>Cuatro preguntas diseñadas para romperlo</h2>
+    <p class="lede">Cada pregunta prueba un modo de falla distinto: recuperación de un dato puntual, recuperación de dos datos combinados, disciplina de vocabulario por perfil, y rechazo correcto fuera de dominio. Las 4 pasaron.</p>
+
+    <div class="qa-grid">
+      <div class="qa-card">
+        <div class="qa-head"><span class="verdict-pill">Correcto</span><span class="obj">Objetivo: dato puntual del documento</span></div>
+        <div class="qa-body">
+          <div class="chatlog">
+            <div class="bubble user">¿Qué AUC obtuvo este modelo en el conjunto de test?</div>
+            <div class="bubble bot">El modelo alcanzó un AUC de 0.81 en el conjunto de test.</div>
+          </div>
+          <div class="log-line" style="margin-top:10px;">INFO:app.rag:Recuperados 3 chunks para query</div>
+        </div>
+      </div>
+
+      <div class="qa-card">
+        <div class="qa-head"><span class="verdict-pill">Correcto</span><span class="obj">Objetivo: dos datos combinados</span></div>
+        <div class="qa-body">
+          <div class="chatlog">
+            <div class="bubble user">¿Qué algoritmo usa este modelo y qué columna predice?</div>
+            <div class="bubble bot">Este sistema de clasificación utiliza un LightGBM para su componente predictivo. Su objetivo es determinar el DIAGNOSTICO, indicando si un tumor presenta características de Maligno o Benigno.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qa-card">
+        <div class="qa-head"><span class="verdict-pill">Correcto</span><span class="obj">Objetivo: disciplina de vocabulario (perfil Experto en el Dominio)</span></div>
+        <div class="qa-body">
+          <div class="chatlog">
+            <div class="bubble user">¿Cuál fue el valor SHAP de la variable más importante?</div>
+            <div class="bubble bot">La rápida tasa de crecimiento observada fue el factor que influyó con mayor fuerza en la determinación de malignidad. Su impacto se cuantificó en 1.63, empujando la evaluación hacia un resultado de Maligno.</div>
+          </div>
+          <p style="margin-top:10px; font-size:.84rem;">La respuesta reformula sin decir "SHAP" ni "feature" — cumple la regla del prompt de este perfil, que las tiene explícitamente prohibidas.</p>
+        </div>
+      </div>
+
+      <div class="qa-card">
+        <div class="qa-head"><span class="verdict-pill">Correcto</span><span class="obj">Objetivo: rechazo fuera de dominio (sin alucinar)</span></div>
+        <div class="qa-body">
+          <div class="chatlog">
+            <div class="bubble user">¿Cuál es la capital de Francia?</div>
+            <div class="bubble bot">Mi propósito es explicarte sobre la predicción del tumor. No tengo información sobre la capital de Francia.</div>
+          </div>
+          <div class="log-line" style="margin-top:10px;">INFO:app.rag:Recuperados 0 chunks para query</div>
+          <p style="margin-top:10px; font-size:.84rem;">La recuperación no encontró chunks relevantes y el modelo no rellenó el vacío con conocimiento general — comportamiento correcto de un asistente acotado a su base de conocimiento.</p>
         </div>
       </div>
     </div>
-    <p style="margin-top:14px;">Respuesta correcta, verbatim contra <span class="mono">contexto_modelo.txt</span> ("AUC en conjunto de test: 0.81"). Confirmado con el log del servidor en el momento exacto de la consulta:</p>
-    <div class="log-line">INFO:app.rag:Recuperados 3 chunks para query</div>
-    <p>Este log solo aparece cuando Vertex AI RAG Engine ejecuta una búsqueda vectorial real sobre el corpus indexado — no es una respuesta genérica del modelo de lenguaje.</p>
   </section>
 
   <section id="hallazgos">
-    <span class="tag">05 — Hallazgos críticos corregidos durante esta prueba</span>
+    <span class="tag">06 — Hallazgos críticos corregidos durante la primera prueba</span>
     <h2>Lo que esta prueba encontró antes de que lo encontrara un usuario real</h2>
 
     <div class="finding">
       <div class="finding-head"><span class="sev">Crítico</span><h3>El frontend nunca enviaba la API key al backend</h3></div>
       <div class="finding-body">
-        <p>Desde que se activó autenticación por API key en el backend (sesión anterior), <span class="mono">mock-api.ts</span> nunca agregó el header <span class="mono">X-API-Key</span> a ninguna llamada. Resultado: cada acción de un usuario real —subir un archivo, generar una explicación, chatear— habría fallado con <span class="mono">401</span>. La app estaba, en los hechos, completamente inutilizable en producción.</p>
-        <div class="fix"><span class="lbl">Fix</span><p>Header centralizado en un helper <span class="mono">authHeaders()</span> aplicado a los 11 fetch de la librería; la key se inyecta en build-time desde Secret Manager (mismo secreto que ya usa el backend), vía Cloud Build <span class="mono">availableSecrets</span>.</p></div>
+        <p>Desde que se activó autenticación por API key en el backend, <span class="mono">mock-api.ts</span> nunca agregó el header <span class="mono">X-API-Key</span> a ninguna llamada. Resultado: cada acción de un usuario real habría fallado con <span class="mono">401</span>. La app estaba, en los hechos, completamente inutilizable en producción.</p>
+        <div class="fix"><span class="lbl">Fix</span><p>Header centralizado en un helper <span class="mono">authHeaders()</span> aplicado a los 11 fetch de la librería; la key se inyecta en build-time desde Secret Manager, vía Cloud Build <span class="mono">availableSecrets</span>.</p></div>
       </div>
     </div>
 
     <div class="finding">
       <div class="finding-head"><span class="sev">Crítico</span><h3>Vertex AI RAG Engine no podía crear el corpus en us-central1</h3></div>
       <div class="finding-body">
-        <p>La creación del corpus fallaba silenciosamente en <b>cada intento, desde el primer despliegue</b> — el error quedaba atrapado por un <span class="mono">except</span> que solo escribía un <span class="mono">logger.warning</span>, nunca visible en la UI. El chat y las narrativas funcionaban igual, pero sin ningún contexto real de la base de conocimiento: respuestas plausibles pero no fundamentadas.</p>
+        <p>La creación del corpus fallaba silenciosamente en cada intento — el error quedaba atrapado por un <span class="mono">except</span> que solo escribía un <span class="mono">logger.warning</span>, nunca visible en la UI. El chat y las narrativas funcionaban igual, pero sin contexto real de la base de conocimiento.</p>
         <div class="log-line">WARNING:app.main:RAG no pudo inicializarse: ('Failed in RagCorpus creation due to: ',
 InvalidArgument('For new projects, using Spanner mode with RAG Engine in us-central1,
 us-east1, and us-east4 is restricted to only allowlisted projects...'))</div>
-        <div class="fix"><span class="lbl">Fix</span><p><span class="mono">GCP_LOCATION</span> (variable independiente de la región de Cloud Run) cambiada a <span class="mono">us-west1</span>, donde la creación de corpus sí está permitida — verificado con una llamada real antes de aplicar el cambio en producción.</p></div>
+        <div class="fix"><span class="lbl">Fix</span><p><span class="mono">GCP_LOCATION</span> cambiada a <span class="mono">us-west1</span>, donde la creación de corpus sí está permitida.</p></div>
       </div>
     </div>
   </section>
